@@ -1,0 +1,186 @@
+{
+  "_comment": "analyze 階段輸出的 JSON 範例。這份檔案是結構的權威參考，修改 src/blogseo/schemas/result.py 時務必同步更新。範例刻意包含成功、模型失敗、圖片略過、費用未知四種情況。",
+  "schema_version": "1.2",
+  "article_info": {
+    "path": "D:\\blog\\content\\posts\\kriging-interpolation\\index.md",
+    "title": "用克利金法做空間內插：從採樣點到連續濃度圖",
+    "language": "zh",
+    "word_count": 283,
+    "image_count": 3,
+    "frontmatter_keys": ["date", "tags", "title"]
+  },
+  "keyword_summary": {
+    "claude": {
+      "model_id": "claude-sonnet-5",
+      "result": {
+        "keywords": [
+          "克利金法",
+          "空間內插",
+          "半變異元模型",
+          "環境監測濃度分布",
+          "地下水採樣佈點"
+        ],
+        "summaries": [
+          "只有數十口採樣井卻要回答整片區域的污染分布？克利金法從資料本身估計半變異元模型，推算未採樣位置的濃度並同時給出估計誤差。",
+          "以球型半變異元模型擬合，塊金值 60、基台值 420、變程 850 公尺，搜尋半徑設在 900 公尺，完成全區濃度內插並輸出誤差圖層。",
+          "讀完可以自行判斷變程與搜尋半徑該怎麼設定，做出帶誤差資訊的濃度分布圖，並找出採樣密度不足、需要優先補點的區域。"
+        ]
+      },
+      "summary_lengths": [61, 62, 58],
+      "error": null,
+      "elapsed_ms": 6185
+    },
+    "gpt": {
+      "model_id": "gpt-5",
+      "result": null,
+      "summary_lengths": [],
+      "error": "[openai/gpt-5] Connection error.",
+      "elapsed_ms": 30014
+    }
+  },
+  "images": {
+    "images/DSC_00841.png": {
+      "source": "images/DSC_00841.png",
+      "resolved_path": "D:\\blog\\content\\posts\\kriging-interpolation\\images\\DSC_00841.png",
+      "exists": true,
+      "extension": ".png",
+      "size_bytes": 12209,
+      "width": 900,
+      "height": 600,
+      "skipped_reason": null,
+      "occurrences": [
+        {
+          "line": 11,
+          "start": 173,
+          "end": 198,
+          "syntax": "markdown",
+          "raw": "![](images/DSC_00841.png)",
+          "original_alt": ""
+        }
+      ],
+      "models": {
+        "claude": {
+          "model_id": "claude-sonnet-5",
+          "result": {
+            "suggested_filename": "semivariogram-spherical-model-fit",
+            "alt": "半變異元圖顯示球型模型擬合結果，塊金值約 60，基台值約 420，範圍約 850 公尺"
+          },
+          "final_filename": "semivariogram-spherical-model-fit.png",
+          "error": null,
+          "elapsed_ms": 6035
+        },
+        "gpt": {
+          "model_id": "gpt-5",
+          "result": null,
+          "final_filename": null,
+          "error": "[openai/gpt-5] Connection error.",
+          "elapsed_ms": 30011
+        }
+      }
+    },
+    "images/output_final_v2.PNG": {
+      "source": "images/output_final_v2.PNG",
+      "resolved_path": "D:\\blog\\content\\posts\\kriging-interpolation\\images\\output_final_v2.PNG",
+      "exists": true,
+      "extension": ".png",
+      "size_bytes": 91983,
+      "width": 800,
+      "height": 800,
+      "skipped_reason": null,
+      "occurrences": [
+        {
+          "line": 20,
+          "start": 298,
+          "end": 357,
+          "syntax": "html",
+          "raw": "<img src=\"images/output_final_v2.PNG\" alt=\"結果\" width=\"700\">",
+          "original_alt": "結果"
+        },
+        {
+          "line": 46,
+          "start": 981,
+          "end": 1020,
+          "syntax": "markdown",
+          "raw": "![結果](images/output_final_v2.PNG)",
+          "original_alt": "結果"
+        }
+      ],
+      "models": {
+        "claude": {
+          "model_id": "claude-sonnet-5",
+          "result": {
+            "suggested_filename": "kriging-predicted-concentration-map",
+            "alt": "克利金內插產生的濃度分布圖，中央區域濃度接近 1.0 mg/L 並向外遞減至 0.2 mg/L"
+          },
+          "final_filename": "kriging-predicted-concentration-map.png",
+          "error": null,
+          "elapsed_ms": 7271
+        },
+        "gpt": {
+          "model_id": "gpt-5",
+          "result": null,
+          "final_filename": null,
+          "error": "[openai/gpt-5] Connection error.",
+          "elapsed_ms": 30008
+        }
+      }
+    },
+    "https://example.com/banner.png": {
+      "source": "https://example.com/banner.png",
+      "resolved_path": null,
+      "exists": false,
+      "extension": ".png",
+      "size_bytes": null,
+      "width": null,
+      "height": null,
+      "skipped_reason": "外部連結，不做本地改名",
+      "occurrences": [
+        {
+          "line": 52,
+          "start": 1180,
+          "end": 1223,
+          "syntax": "markdown",
+          "raw": "![橫幅](https://example.com/banner.png)",
+          "original_alt": "橫幅"
+        }
+      ],
+      "models": {}
+    }
+  },
+  "metadata": {
+    "generated_at": "2026-08-21T07:34:25+00:00",
+    "tool_version": "0.1.0",
+    "schema_version": "1.2",
+    "total_elapsed_ms": 37946,
+    "requested_fields": ["images", "keywords", "summary"],
+    "alt_language": "zh",
+    "summary_min_chars": 60,
+    "summary_max_chars": 150,
+    "summary_count": 3,
+    "usd_to_twd_rate": 31.8,
+    "total_cost_usd": 0.017154,
+    "total_cost_twd": 0.5454972,
+    "models": {
+      "claude": {
+        "model_id": "claude-sonnet-5",
+        "calls": 3,
+        "failed_calls": 0,
+        "input_tokens": 6542,
+        "output_tokens": 407,
+        "elapsed_ms": 19491,
+        "estimated_cost_usd": 0.017154,
+        "estimated_cost_twd": 0.5454972
+      },
+      "gpt": {
+        "model_id": "gpt-5",
+        "calls": 3,
+        "failed_calls": 3,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "elapsed_ms": 90033,
+        "estimated_cost_usd": null,
+        "estimated_cost_twd": null
+      }
+    }
+  }
+}

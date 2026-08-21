@@ -1,0 +1,204 @@
+"""共用 prompt。
+
+所有 provider 共用同一組 prompt，這樣不同模型的輸出才有可比性——比較結果的
+差異應該來自模型能力，而不是來自 prompt 寫法不同。
+"""
+
+from __future__ import annotations
+
+from typing import Final
+
+from blogseo.config import (
+    ALT_MAX_CHARS,
+    KEYWORD_COUNT,
+    SUMMARY_MAX_CHARS,
+    SUMMARY_MIN_CHARS,
+    SUMMARY_VARIANT_COUNT,
+)
+
+#: 送進模型的正文字元上限，避免超長文章造成不必要的花費。
+MAX_CONTENT_CHARS: Final[int] = 20_000
+
+#: 各摘要版本的切入角度。要求多個版本時依序套用，目的是讓版本之間真的不同，
+#: 而不是同一句話換幾個詞。超出清單長度的部分交由模型自行延伸。
+_SUMMARY_ANGLES: Final[tuple[str, ...]] = (
+    "點出讀者實際遇到的問題，以及這篇文章提供的解法",
+    "強調文章中出現的具體技術、工具名稱與關鍵數字",
+    "說明讀者照做之後能達成什麼結果、獲得什麼好處",
+    "描述這個做法適用的情境與前提條件",
+    "指出這個主題常見的誤解或容易踩的坑",
+)
+
+_LANGUAGE_NAMES: Final[dict[str, str]] = {
+    "zh": "繁體中文",
+    "en": "English",
+    "ja": "日本語",
+}
+
+
+def language_name(code: str) -> str:
+    """把語言代碼轉成寫進 prompt 的語言名稱。
+
+    Args:
+        code: 語言代碼，例如 ``zh``。
+
+    Returns:
+        語言名稱；未知代碼原樣回傳。
+    """
+    return _LANGUAGE_NAMES.get(code, code)
+
+
+def _summary_angle_lines(count: int) -> str:
+    """列出各摘要版本要採用的切入角度。
+
+    Args:
+        count: 摘要版本數。
+
+    Returns:
+        條列文字；只要一個版本時回傳空字串。
+    """
+    if count <= 1:
+        return ""
+    lines = []
+    for index in range(count):
+        if index < len(_SUMMARY_ANGLES):
+            lines.append(f"   - 第 {index + 1} 則：{_SUMMARY_ANGLES[index]}")
+        else:
+            lines.append(f"   - 第 {index + 1} 則：再換一個上面沒用過的切入角度")
+    return "\n".join(lines)
+
+
+def text_system_prompt(
+    language: str,
+    *,
+    include_keywords: bool = True,
+    include_summaries: bool = True,
+    summary_count: int = SUMMARY_VARIANT_COUNT,
+    summary_min_chars: int = SUMMARY_MIN_CHARS,
+    summary_max_chars: int = SUMMARY_MAX_CHARS,
+) -> str:
+    """建立文章分析的 system prompt。
+
+    只要其中一項時，另一項的規則不會出現在 prompt 裡——既省下輸入 token，
+    也避免模型分心去做沒被要求的事。
+
+    Args:
+        language: 文章語言代碼。
+        include_keywords: 是否要產生關鍵字。
+        include_summaries: 是否要產生摘要。
+        summary_count: 要產生幾個摘要版本。
+        summary_min_chars: 每則摘要的字元下限。
+        summary_max_chars: 每則摘要的字元上限。
+
+    Returns:
+        system prompt 文字。
+
+    Raises:
+        ValueError: 兩項都沒要求。
+    """
+    if not include_keywords and not include_summaries:
+        raise ValueError("關鍵字與摘要至少要產生一項")
+
+    name = language_name(language)
+    plural = f"{summary_count} 則不同的" if summary_count > 1 else "一則"
+
+    goals: list[str] = []
+    if include_keywords:
+        goals.append(f"{KEYWORD_COUNT} 個關鍵字")
+    if include_summaries:
+        goals.append(f"{plural} meta description")
+
+    rules: list[str] = [f"輸出一律使用{name}，與文章語言一致。"]
+
+    if include_keywords:
+        rules += [
+            (
+                "關鍵字要是讀者真的會拿去搜尋的詞，涵蓋主題、技術名詞與應用情境，"
+                "避免過於籠統的字（例如「技術」「教學」）。"
+            ),
+            "關鍵字依重要性由高到低排序，彼此不重複、不互為子集。",
+        ]
+
+    if include_summaries:
+        rules += [
+            (
+                f"每則摘要的長度必須落在 {summary_min_chars} 到 {summary_max_chars} 個字元之間。"
+                "計算方式是逐字元計算，中文字、英文字母、數字、標點符號與空白各算一個字元。"
+                "這是硬性要求，寫完請自行確認長度再輸出，太短撐不滿搜尋結果版位，"
+                "太長會被搜尋引擎截斷。"
+            ),
+            "每則摘要都是單一段落、語句完整通順，不要換行，也不要用條列。",
+            "摘要不要用「本文將介紹」「在這篇文章中」這類空話開頭，直接講重點。",
+        ]
+        if summary_count > 1:
+            rules.append(
+                f"{summary_count} 則摘要之間必須有明顯不同的切入角度，"
+                "不能只是同一句話換幾個詞。請依下列分工撰寫：\n"
+                + _summary_angle_lines(summary_count)
+            )
+
+    numbered = "\n".join(f"{index}. {rule}" for index, rule in enumerate(rules, start=1))
+    return (
+        "你是資深的技術部落格 SEO 編輯。你的任務是閱讀一篇文章，"
+        f"產出{'與'.join(goals)}。\n\n規則：\n{numbered}"
+    )
+
+
+def text_user_prompt(title: str | None, content: str) -> str:
+    """建立文章分析的 user prompt。
+
+    Args:
+        title: 文章標題，可為 ``None``。
+        content: 文章正文。
+
+    Returns:
+        user prompt 文字；超長時會截斷並標註。
+    """
+    body = content.strip()
+    if len(body) > MAX_CONTENT_CHARS:
+        body = body[:MAX_CONTENT_CHARS] + "\n\n（後續內容因長度限制已省略）"
+
+    header = f"文章標題：{title}\n\n" if title else ""
+    return f"{header}以下是文章內容：\n\n{body}"
+
+
+def image_system_prompt(alt_language: str) -> str:
+    """建立圖片分析的 system prompt。
+
+    Args:
+        alt_language: alt 文字要使用的語言代碼。
+
+    Returns:
+        system prompt 文字。
+    """
+    name = language_name(alt_language)
+    return (
+        "你是負責圖片 SEO 的編輯。你會看到一張部落格文章中的圖片，"
+        "以及它在文章裡的上下文。請產出這張圖的檔名與 alt 文字。\n\n"
+        "規則：\n"
+        "1. 檔名一律使用英文小寫，單字之間用連字號，3 到 6 個單字，不含副檔名。\n"
+        "2. 檔名要描述圖片的實際內容，不要用 image、photo、screenshot-1 這種無意義的字。"
+        "如果圖片是某個工具的操作畫面，就寫出工具名稱與該畫面在做什麼。\n"
+        f"3. alt 文字使用{name}，在 {ALT_MAX_CHARS} 個字元以內。\n"
+        "4. alt 要描述圖片傳達的資訊，讓看不到圖的人也能理解，"
+        "開頭不要出現「圖片」「示意圖」「一張」「image of」這類贅詞。\n"
+        "5. 圖片若含有關鍵文字（圖表標題、程式碼、數值），請把重點寫進 alt。\n"
+        "6. 只根據你實際看到的內容描述，不要臆測圖片沒有呈現的東西。"
+    )
+
+
+def image_user_prompt(context: str, original_filename: str) -> str:
+    """建立圖片分析的 user prompt。
+
+    Args:
+        context: 圖片在文章中的上下文。
+        original_filename: 原始檔名，供模型參考但不應照抄。
+
+    Returns:
+        user prompt 文字。
+    """
+    parts = [f"原始檔名：{original_filename}（僅供參考，通常沒有意義，不要照抄）"]
+    if context.strip():
+        parts.append(context.strip())
+    parts.append("請分析上方這張圖片。")
+    return "\n\n".join(parts)

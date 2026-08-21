@@ -1,0 +1,14 @@
+---
+description: Python 程式碼風格規範
+globs: ["**/*.py"]
+alwaysApply: false
+---
+
+# Python 風格
+
+- 型別提示必須完整（含回傳型別）
+- 使用 pathlib 而非 os.path
+- 所有檔案 I/O 使用 with context manager
+- 錯誤處理：自訂 exception class（如 ProviderError, ImageNotFoundError），
+  不要裸露 except Exception
+- Docstring 用 Google style

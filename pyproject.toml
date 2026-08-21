@@ -1,0 +1,36 @@
+[project]
+name = "blog-seo-ai"
+version = "0.1.0"
+description = "本地 CLI：用多家 LLM 分析部落格文章，產生 SEO 關鍵字、摘要，並優化圖片檔名與 alt"
+readme = "README.md"
+authors = [
+    { name = "3mofstudy", email = "3mofstudy@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "typer>=0.15",
+    "rich>=13.7",
+    "pydantic>=2.9",
+    "python-dotenv>=1.0",
+    "python-frontmatter>=1.1",
+    "pillow>=11.0",
+    "anthropic>=0.40",
+]
+
+[project.scripts]
+blog-seo-ai = "blogseo.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "blogseo"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

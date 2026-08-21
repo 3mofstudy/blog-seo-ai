@@ -1,0 +1,38 @@
+---
+description: 分析結果輸出的 JSON 結構規範
+globs:
+alwaysApply: false
+---
+
+# 輸出 JSON 結構
+
+頂層必須包含：schema_version, article_info, keyword_summary（依 model 分組）,
+images（依圖片再依 model 分組）, metadata（耗時/token數）
+
+分組的鍵一律使用使用者在 `--models` 輸入的別名（例如 `claude`、
+`claude:claude-opus-5`），不要用內部 provider 名稱，這樣同一家的不同模型
+才能在同一份 JSON 裡並列比較。
+
+每個「模型 × 目標」的格子都必須能單獨帶 `error` 欄位：個別模型或個別圖片
+失敗時只填該格的 error，不得中斷其他呼叫，也不得讓整份 JSON 產不出來。
+
+摘要一律是 `summaries` 陣列（多個不同切入角度的版本），不是單一字串；
+同層的 `summary_lengths` 記錄各版本字元數，順序需與 `summaries` 一致。
+字元數以 Python `len()` 計算，中文字、標點、空白各算一個。
+本次要求的字數範圍與版本數記在 `metadata.summary_min_chars`、
+`summary_max_chars`、`summary_count`，讓 JSON 本身可自我說明。
+
+使用者可用 `--fields` 只產生部分項目（keywords / summary / images）。
+未被要求的項目一律輸出空陣列或空物件，不得用 `null`，以免下游分不清是
+「沒要求」還是「失敗」；真正的失敗永遠帶 `error`。本次要求的項目記在
+`metadata.requested_fields`。
+
+圖片條目的 `occurrences` 記錄該圖在正文中每一次引用的字元位置，
+apply 階段必須依位置替換，不可用全域字串取代。
+
+`metadata.models` 的每個模型會帶 `estimated_cost_usd` / `estimated_cost_twd`，
+由 provider 的內建價目表估算；模型不在價目表中時為 `null`，不得猜測數字。
+換算匯率記在 `metadata.usd_to_twd_rate`。
+
+範例結構見 docs/schema-example.json，修改欄位時務必同步更新
+src/blogseo/schemas/result.py 與此檔案。

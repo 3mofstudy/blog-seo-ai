@@ -1,0 +1,22 @@
+---
+description: 新增或修改 LLM provider 實作時套用此規則，定義統一介面規範
+globs:
+alwaysApply: false
+---
+
+# Provider 抽象層規範
+
+所有 provider 必須實作同一個基底介面（見 src/blogseo/llm/base.py）：
+- `analyze_text(content: str) -> KeywordSummaryResult`
+- `analyze_image(image_bytes: bytes, context: str, *, media_type: str, original_filename: str) -> ImageAnalysisResult`
+
+新增 provider 時：
+1. 繼承 BaseProvider，並設定 class 層級的 `name` 與 `default_model`
+2. 在 src/blogseo/llm/registry.py 的 `_SPECS` 註冊別名與類別
+3. API key 讀取由 BaseProvider.__init__ 統一處理，子類別不得自行讀環境變數
+4. 回傳值一律走 Pydantic model，不要直接回傳 dict
+5. prompt 一律取自 src/blogseo/llm/prompts.py，各家共用同一份，
+   這樣模型之間的輸出差異才反映能力差異而非 prompt 差異
+6. 所有 SDK 例外都要轉成 ProviderError；呼叫成功與失敗都要更新 `self.usage`
+7. 結構化輸出優先使用各家原生機制（Anthropic 的 messages.parse、
+   OpenAI 的 structured output、Gemini 的 response schema），不要自己 parse JSON
