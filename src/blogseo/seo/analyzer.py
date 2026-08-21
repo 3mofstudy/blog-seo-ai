@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 
 from blogseo import __version__
 from blogseo.config import (
+    ALT_MAX_CHARS,
     CONTEXT_RADIUS,
     SUMMARY_MAX_CHARS,
     SUMMARY_MIN_CHARS,
@@ -58,6 +59,7 @@ class AnalyzeOptions:
         summary_count: 每個模型要產生幾個不同角度的摘要版本。
         summary_min_chars: 每則摘要的字元下限。
         summary_max_chars: 每則摘要的字元上限。
+        alt_max_chars: alt 文字的字元上限。
         max_images: 最多分析幾張圖，``None`` 為不限。
         concurrency: 平行呼叫上限。
         context_radius: 擷取圖片上下文的字元半徑。
@@ -71,6 +73,7 @@ class AnalyzeOptions:
     summary_count: int = SUMMARY_VARIANT_COUNT
     summary_min_chars: int = SUMMARY_MIN_CHARS
     summary_max_chars: int = SUMMARY_MAX_CHARS
+    alt_max_chars: int = ALT_MAX_CHARS
     max_images: int | None = None
     concurrency: int = 4
     context_radius: int = CONTEXT_RADIUS
@@ -143,6 +146,13 @@ class _ProviderSlot:
     provider: BaseProvider | None
     model_id: str
     error: str | None = None
+
+
+def _display_model_id(provider: BaseProvider) -> str:
+    """用量表格顯示的模型 id；文字與圖片用不同模型時兩者都列出。"""
+    if provider.text_model == provider.image_model:
+        return provider.model
+    return f"{provider.text_model} + {provider.image_model}"
 
 
 def _build_image_entries(
@@ -248,6 +258,7 @@ def _build_slots(article: ParsedArticle, options: AnalyzeOptions) -> list[_Provi
                 summary_count=options.summary_count,
                 summary_min_chars=options.summary_min_chars,
                 summary_max_chars=options.summary_max_chars,
+                alt_max_chars=options.alt_max_chars,
                 timeout=options.timeout,
             )
         except BlogSeoError as exc:
@@ -256,7 +267,11 @@ def _build_slots(article: ParsedArticle, options: AnalyzeOptions) -> list[_Provi
             )
             continue
         slots.append(
-            _ProviderSlot(token=token, provider=provider, model_id=provider.model)
+            _ProviderSlot(
+                token=token,
+                provider=provider,
+                model_id=_display_model_id(provider),
+            )
         )
 
     if all(slot.provider is None for slot in slots):
@@ -282,12 +297,12 @@ def _run_text_job(slot: _ProviderSlot, article: ParsedArticle) -> ModelKeywordSu
         result = slot.provider.analyze_text(article.content)
     except ProviderError as exc:
         return ModelKeywordSummary(
-            model_id=slot.model_id,
+            model_id=slot.provider.text_model,
             error=str(exc),
             elapsed_ms=int((time.perf_counter() - started) * 1000),
         )
     return ModelKeywordSummary(
-        model_id=slot.model_id,
+        model_id=slot.provider.text_model,
         result=result,
         summary_lengths=[len(text) for text in result.summaries],
         elapsed_ms=int((time.perf_counter() - started) * 1000),
@@ -316,14 +331,15 @@ def _run_image_job(slot: _ProviderSlot, job: _ImageJob) -> ModelImageAnalysis:
         )
     except ProviderError as exc:
         return ModelImageAnalysis(
-            model_id=slot.model_id,
+            model_id=slot.provider.image_model,
             error=str(exc),
             elapsed_ms=int((time.perf_counter() - started) * 1000),
         )
     return ModelImageAnalysis(
-        model_id=slot.model_id,
+        model_id=slot.provider.image_model,
         result=result,
         final_filename=build_filename(result.suggested_filename, job.target.extension),
+        alt_length=len(result.alt),
         elapsed_ms=int((time.perf_counter() - started) * 1000),
     )
 
@@ -435,6 +451,7 @@ def analyze_article(
             language=article.language,
             word_count=article.word_count,
             image_count=len(article.targets),
+            content_hash=article.content_hash,
             frontmatter_keys=sorted(article.metadata),
         ),
         keyword_summary=keyword_summary,
@@ -449,6 +466,7 @@ def analyze_article(
             summary_min_chars=options.summary_min_chars,
             summary_max_chars=options.summary_max_chars,
             summary_count=options.summary_count,
+            alt_max_chars=options.alt_max_chars,
             usd_to_twd_rate=options.usd_to_twd_rate,
             total_cost_usd=total_cost_usd,
             total_cost_twd=(

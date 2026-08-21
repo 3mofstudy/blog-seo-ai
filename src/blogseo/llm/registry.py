@@ -45,6 +45,13 @@ _SPECS: Final[tuple[ProviderSpec, ...]] = (
         aliases=("claude", "anthropic"),
     ),
     ProviderSpec(
+        key="huggingface",
+        module="blogseo.llm.huggingface",
+        class_name="HuggingFaceProvider",
+        package="huggingface_hub",
+        aliases=("hf", "huggingface", "qwen"),
+    ),
+    ProviderSpec(
         key="openai",
         module="blogseo.llm.openai",
         class_name="OpenAIProvider",
@@ -143,9 +150,18 @@ def parse_model_tokens(raw: str) -> list[str]:
     """
     tokens: list[str] = []
     for piece in raw.split(","):
-        token = piece.strip().lower()
-        if token and token not in tokens:
+        piece = piece.strip()
+        if not piece:
+            continue
+        alias, separator, model = piece.partition(":")
+        alias = alias.strip().lower()
+        if not alias:
+            continue
+        # 只把別名折成小寫。Hugging Face 的模型 id 大小寫有意義，
+        # 例如 Qwen/Qwen2.5-VL-7B-Instruct。
+        token = f"{alias}:{model.strip()}" if separator else alias
+        if token not in tokens:
             tokens.append(token)
     if not tokens:
-        raise ConfigError("請至少指定一個模型，例如 --models claude")
+        raise ConfigError("請至少指定一個模型，例如 --models hf")
     return tokens

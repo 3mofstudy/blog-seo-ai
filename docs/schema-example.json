@@ -1,12 +1,13 @@
 {
   "_comment": "analyze 階段輸出的 JSON 範例。這份檔案是結構的權威參考，修改 src/blogseo/schemas/result.py 時務必同步更新。範例刻意包含成功、模型失敗、圖片略過、費用未知四種情況。",
-  "schema_version": "1.2",
+  "schema_version": "1.4",
   "article_info": {
     "path": "D:\\blog\\content\\posts\\kriging-interpolation\\index.md",
     "title": "用克利金法做空間內插：從採樣點到連續濃度圖",
     "language": "zh",
     "word_count": 283,
     "image_count": 3,
+    "content_hash": "9f2c4b1e7a58d3660c8f5b2ad41e97c30b6ee8f14d7a259c8b3016f4ad5e7c22",
     "frontmatter_keys": ["date", "tags", "title"]
   },
   "keyword_summary": {
@@ -63,9 +64,10 @@
           "model_id": "claude-sonnet-5",
           "result": {
             "suggested_filename": "semivariogram-spherical-model-fit",
-            "alt": "半變異元圖顯示球型模型擬合結果，塊金值約 60，基台值約 420，範圍約 850 公尺"
+            "alt": "半變異元圖與球型模型擬合曲線"
           },
           "final_filename": "semivariogram-spherical-model-fit.png",
+          "alt_length": 14,
           "error": null,
           "elapsed_ms": 6035
         },
@@ -73,6 +75,7 @@
           "model_id": "gpt-5",
           "result": null,
           "final_filename": null,
+          "alt_length": 0,
           "error": "[openai/gpt-5] Connection error.",
           "elapsed_ms": 30011
         }
@@ -110,9 +113,10 @@
           "model_id": "claude-sonnet-5",
           "result": {
             "suggested_filename": "kriging-predicted-concentration-map",
-            "alt": "克利金內插產生的濃度分布圖，中央區域濃度接近 1.0 mg/L 並向外遞減至 0.2 mg/L"
+            "alt": "克利金內插的濃度分布圖，中央濃度最高"
           },
           "final_filename": "kriging-predicted-concentration-map.png",
+          "alt_length": 18,
           "error": null,
           "elapsed_ms": 7271
         },
@@ -120,6 +124,7 @@
           "model_id": "gpt-5",
           "result": null,
           "final_filename": null,
+          "alt_length": 0,
           "error": "[openai/gpt-5] Connection error.",
           "elapsed_ms": 30008
         }
@@ -150,13 +155,14 @@
   "metadata": {
     "generated_at": "2026-08-21T07:34:25+00:00",
     "tool_version": "0.1.0",
-    "schema_version": "1.2",
+    "schema_version": "1.4",
     "total_elapsed_ms": 37946,
     "requested_fields": ["images", "keywords", "summary"],
     "alt_language": "zh",
     "summary_min_chars": 60,
     "summary_max_chars": 150,
     "summary_count": 3,
+    "alt_max_chars": 30,
     "usd_to_twd_rate": 31.8,
     "total_cost_usd": 0.017154,
     "total_cost_twd": 0.5454972,

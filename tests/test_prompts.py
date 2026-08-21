@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from blogseo.llm.prompts import text_system_prompt
+from blogseo.llm.prompts import image_system_prompt, text_system_prompt
 from blogseo.schemas.result import (
     AnalysisField,
+    ImageAnalysisResult,
     KeywordsOnlySchema,
     KeywordSummaryResult,
     KeywordSummarySchema,
@@ -116,9 +117,42 @@ def test_prompt_rejects_empty_request() -> None:
         text_system_prompt("zh", include_keywords=False, include_summaries=False)
 
 
+def test_image_prompt_states_alt_limit() -> None:
+    prompt = image_system_prompt("zh", alt_max_chars=30)
+
+    assert "不得超過 30 個字元" in prompt
+    assert "繁體中文" in prompt
+    assert "一句話講完" in prompt
+
+
+def test_image_prompt_follows_alt_language() -> None:
+    assert "English" in image_system_prompt("en", alt_max_chars=40)
+    assert "不得超過 40 個字元" in image_system_prompt("en", alt_max_chars=40)
+
+
 def test_from_payload_fills_missing_field_with_empty_list() -> None:
     result = KeywordSummaryResult.from_payload(
         KeywordsOnlySchema(keywords=["一", "二"])
     )
     assert result.keywords == ["一", "二"]
     assert result.summaries == []
+
+
+def test_image_prompt_states_json_field_names() -> None:
+    prompt = image_system_prompt("zh")
+    assert "suggested_filename" in prompt
+    assert "不要改成 filename" in prompt
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"suggested_filename": "AWS MFA Settings", "alt": "安全憑證頁面"},
+        {"filename": "AWS MFA Settings", "alt": "安全憑證頁面"},
+        {"file_name": "AWS MFA Settings", "alt_text": "安全憑證頁面"},
+    ],
+)
+def test_image_result_accepts_common_aliases(payload: dict[str, str]) -> None:
+    result = ImageAnalysisResult.model_validate(payload)
+    assert result.suggested_filename == "aws-mfa-settings"
+    assert result.alt == "安全憑證頁面"

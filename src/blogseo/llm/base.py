@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar, Final
 
 from blogseo.config import (
+    ALT_MAX_CHARS,
     SUMMARY_MAX_CHARS,
     SUMMARY_MIN_CHARS,
     SUMMARY_VARIANT_COUNT,
@@ -97,6 +98,7 @@ class BaseProvider(ABC):
         summary_count: int = SUMMARY_VARIANT_COUNT,
         summary_min_chars: int = SUMMARY_MIN_CHARS,
         summary_max_chars: int = SUMMARY_MAX_CHARS,
+        alt_max_chars: int = ALT_MAX_CHARS,
         timeout: float = 90.0,
         max_retries: int = 2,
     ) -> None:
@@ -111,6 +113,7 @@ class BaseProvider(ABC):
             summary_count: 要產生幾個不同角度的摘要版本。
             summary_min_chars: 每則摘要的字元下限。
             summary_max_chars: 每則摘要的字元上限。
+            alt_max_chars: alt 文字的字元上限。
             timeout: 單次請求逾時秒數。
             max_retries: SDK 層級的重試次數。
 
@@ -124,10 +127,21 @@ class BaseProvider(ABC):
         self.summary_count = summary_count
         self.summary_min_chars = summary_min_chars
         self.summary_max_chars = summary_max_chars
+        self.alt_max_chars = alt_max_chars
         self.timeout = timeout
         self.max_retries = max_retries
         self.usage = UsageStats()
         self._api_key = api_key or get_api_key(self.name)
+
+    @property
+    def text_model(self) -> str:
+        """文章分析實際使用的模型 id。"""
+        return self.model
+
+    @property
+    def image_model(self) -> str:
+        """圖片分析實際使用的模型 id。"""
+        return self.model
 
     @classmethod
     def price_per_mtok(cls, model: str) -> tuple[float, float] | None:

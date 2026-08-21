@@ -162,11 +162,12 @@ def text_user_prompt(title: str | None, content: str) -> str:
     return f"{header}以下是文章內容：\n\n{body}"
 
 
-def image_system_prompt(alt_language: str) -> str:
+def image_system_prompt(alt_language: str, *, alt_max_chars: int = ALT_MAX_CHARS) -> str:
     """建立圖片分析的 system prompt。
 
     Args:
         alt_language: alt 文字要使用的語言代碼。
+        alt_max_chars: alt 文字的字元上限。
 
     Returns:
         system prompt 文字。
@@ -179,11 +180,16 @@ def image_system_prompt(alt_language: str) -> str:
         "1. 檔名一律使用英文小寫，單字之間用連字號，3 到 6 個單字，不含副檔名。\n"
         "2. 檔名要描述圖片的實際內容，不要用 image、photo、screenshot-1 這種無意義的字。"
         "如果圖片是某個工具的操作畫面，就寫出工具名稱與該畫面在做什麼。\n"
-        f"3. alt 文字使用{name}，在 {ALT_MAX_CHARS} 個字元以內。\n"
-        "4. alt 要描述圖片傳達的資訊，讓看不到圖的人也能理解，"
+        f"3. alt 文字使用{name}，長度不得超過 {alt_max_chars} 個字元。"
+        "計算方式是逐字元計算，中文字、英文字母、數字、標點符號與空白各算一個字元。"
+        "這是硬性要求，寫完請自行數過再輸出。\n"
+        "4. alt 只寫這張圖最重要的那一件事，一句話講完就好，不要條列細節、"
+        "不要把畫面上看到的數值全部抄進去；螢幕閱讀器會逐字唸出來，越長越難聽懂。\n"
+        "5. alt 要讓看不到圖的人知道這張圖在說什麼，"
         "開頭不要出現「圖片」「示意圖」「一張」「image of」這類贅詞。\n"
-        "5. 圖片若含有關鍵文字（圖表標題、程式碼、數值），請把重點寫進 alt。\n"
-        "6. 只根據你實際看到的內容描述，不要臆測圖片沒有呈現的東西。"
+        "6. 只根據你實際看到的內容描述，不要臆測圖片沒有呈現的東西。\n"
+        "7. 輸出 JSON 物件，欄位名稱必須正好是 suggested_filename 與 alt，"
+        "不要改成 filename、file_name、caption。"
     )
 
 

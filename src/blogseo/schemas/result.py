@@ -12,16 +12,26 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Annotated, Any, Final
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AfterValidator,
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+)
 
-from blogseo.config import ALT_MAX_CHARS, KEYWORD_COUNT
+from blogseo.config import KEYWORD_COUNT
 from blogseo.image.renamer import slugify
 
 #: 輸出 JSON 的結構版本。欄位有不相容變動時才進位。
 #: 1.1 起 ``summary`` 改為 ``summaries`` 陣列，一次提供多個角度的版本供挑選。
 #: 1.2 起可用 ``--fields`` 只產生部分內容，未要求的欄位為空陣列而非 null，
 #: 並在 metadata 記錄 ``requested_fields`` 與費用估算。
-SCHEMA_VERSION: Final[str] = "1.2"
+#: 1.3 起 ``article_info`` 帶 ``content_hash``，供 review 與 apply 確認
+#: occurrences 的字元位置在分析之後仍然有效。
+#: 1.4 起 metadata 記錄 ``alt_max_chars``，alt 長度不再是寫死的常數。
+SCHEMA_VERSION: Final[str] = "1.4"
 
 
 class AnalysisField(StrEnum):
@@ -160,8 +170,16 @@ class KeywordSummaryResult(BaseModel):
 class ImageAnalysisResult(BaseModel):
     """單一模型對單張圖片的分析結果。"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     suggested_filename: str = Field(
         ...,
+        validation_alias=AliasChoices(
+            "suggested_filename",
+            "filename",
+            "file_name",
+            "new_filename",
+        ),
         description=(
             "SEO 友善的英文檔名主體，全小寫、單字之間用連字號、不含副檔名，"
             "3 到 6 個單字，描述圖片實際內容而非泛稱"
@@ -169,9 +187,15 @@ class ImageAnalysisResult(BaseModel):
     )
     alt: str = Field(
         ...,
+        validation_alias=AliasChoices(
+            "alt",
+            "alt_text",
+            "altText",
+            "caption",
+        ),
         description=(
-            f"圖片的 alt 文字，不超過 {ALT_MAX_CHARS} 個字元，"
-            "直接描述圖片內容，開頭不要出現「圖片」「示意圖」「image of」這類贅詞"
+            "圖片的 alt 文字，長度必須符合指示中的字元上限，"
+            "只寫最重要的那件事，開頭不要出現「圖片」「示意圖」「image of」這類贅詞"
         ),
     )
 
@@ -220,6 +244,10 @@ class ModelImageAnalysis(BaseModel):
     final_filename: str | None = Field(
         default=None,
         description="建議檔名接上原始副檔名後的完整檔名，apply 階段實際會用的值",
+    )
+    alt_length: int = Field(
+        default=0,
+        description="alt 的字元數，可直接對照 metadata.alt_max_chars",
     )
     error: str | None = Field(default=None, description="失敗原因，成功為 null")
     elapsed_ms: int = Field(default=0, description="本次呼叫耗時（毫秒）")
@@ -271,6 +299,14 @@ class ArticleInfo(BaseModel):
     language: str = Field(..., description="偵測到的主要語言，zh 或 en")
     word_count: int = Field(..., description="正文字數（中文計字、英文計詞）")
     image_count: int = Field(..., description="正文中引用到的相異圖片數量")
+    content_hash: str = Field(
+        ...,
+        description=(
+            "正文（不含 front matter）的 sha256 十六進位字串。"
+            "分析之後文章若被編輯過，occurrences 的字元位置就會失效，"
+            "review 與 apply 靠這個值察覺"
+        ),
+    )
     frontmatter_keys: list[str] = Field(
         default_factory=list, description="現有 front matter 的欄位名稱"
     )
@@ -315,6 +351,7 @@ class Metadata(BaseModel):
     summary_min_chars: int = Field(..., description="本次要求的摘要字元下限")
     summary_max_chars: int = Field(..., description="本次要求的摘要字元上限")
     summary_count: int = Field(..., description="本次要求的摘要版本數")
+    alt_max_chars: int = Field(..., description="本次要求的 alt 字元上限")
     usd_to_twd_rate: float = Field(..., description="費用換算使用的美元兌新台幣匯率")
     total_cost_usd: float | None = Field(
         default=None, description="所有模型的估算費用合計（美元）"

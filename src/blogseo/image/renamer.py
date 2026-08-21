@@ -68,3 +68,53 @@ def build_filename(stem: str, extension: str) -> str:
     if suffix and not suffix.startswith("."):
         suffix = f".{suffix}"
     return f"{stem}{suffix}"
+
+
+def _same_file(left: Path, right: Path) -> bool:
+    """判斷兩個路徑是否指向同一個檔案。
+
+    先比 resolve 後的字串（含大小寫），再在檔案都存在時用 ``samefile``。
+    Windows 上 ``Chart.png`` 與 ``chart.png`` 會被視為同一個檔案。
+    """
+    if left.resolve() == right.resolve():
+        return True
+    try:
+        return left.exists() and right.exists() and left.samefile(right)
+    except OSError:
+        return False
+
+
+def rename_files(pairs: list[tuple[Path, Path]]) -> None:
+    """依序改名，用暫存檔名處理對調與只改大小寫的情況。
+
+    兩階段：全部先改成不衝突的暫存名，再改成最終檔名。任何一步失敗都會
+    盡力把已經改過的檔案改回去。
+
+    Args:
+        pairs: ``(來源, 目標)`` 清單；指向同一檔案的項目會被略過。
+
+    Raises:
+        OSError: 磁碟操作失敗。
+    """
+    pending = [(source, dest) for source, dest in pairs if not _same_file(source, dest)]
+    if not pending:
+        return
+
+    staged: list[tuple[Path, Path, Path]] = []
+    try:
+        for index, (source, dest) in enumerate(pending):
+            temp = source.with_name(f"{source.stem}.blogseo-tmp-{index}{source.suffix}")
+            if temp.exists():
+                raise FileExistsError(f"暫存檔名已被占用：{temp}")
+            source.rename(temp)
+            staged.append((source, temp, dest))
+        for _, temp, dest in staged:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            temp.rename(dest)
+    except OSError:
+        for source, temp, dest in reversed(staged):
+            if dest.exists() and not temp.exists():
+                dest.rename(temp)
+            if temp.exists() and not source.exists():
+                temp.rename(source)
+        raise

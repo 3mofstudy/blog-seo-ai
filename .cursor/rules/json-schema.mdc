@@ -22,13 +22,30 @@ images（依圖片再依 model 分組）, metadata（耗時/token數）
 本次要求的字數範圍與版本數記在 `metadata.summary_min_chars`、
 `summary_max_chars`、`summary_count`，讓 JSON 本身可自我說明。
 
+alt 比照摘要處理：`metadata.alt_max_chars` 記錄本次要求的字元上限，
+每個模型的圖片結果同層帶 `alt_length` 記錄實際字元數。長度以 Python `len()`
+計算。超出上限時如實回報並在終端機標色，不得擅自截斷句子。
+
 使用者可用 `--fields` 只產生部分項目（keywords / summary / images）。
 未被要求的項目一律輸出空陣列或空物件，不得用 `null`，以免下游分不清是
 「沒要求」還是「失敗」；真正的失敗永遠帶 `error`。本次要求的項目記在
 `metadata.requested_fields`。
 
-圖片條目的 `occurrences` 記錄該圖在正文中每一次引用的字元位置，
-apply 階段必須依位置替換，不可用全域字串取代。
+圖片條目的 `occurrences` 記錄該圖在正文中每一次引用的字元位置。
+apply 會重新解析當下的文章取得位置，依位置替換，不可用全域字串取代。
+
+`article_info.content_hash` 是正文（不含 front matter）的 sha256。文章在
+analyze 之後若被編輯過，上述字元位置就會失效，因此 review 與 apply 都必須
+先比對這個值，不一致時要明確警告，不得默默套用。
+
+review 階段的選擇結果另外落地成 selection JSON，結構定義在
+src/blogseo/schemas/selection.py，帶有自己的 `schema_version`。它必須記錄
+來源 analysis 路徑、文章路徑與 `content_hash`，讓 apply 只讀這一份檔案就能
+完成套用並自行驗證。
+
+圖片的檔名與 alt 是兩個獨立的決定，各自帶來源欄位（`filename_model`、
+`alt_model`），使用者可以只改其中一項。這兩個欄位用 `null` 表示「不動」，
+不能用空字串代替：空字串的 alt 是有意義的值，裝飾性圖片就該給空 alt。
 
 `metadata.models` 的每個模型會帶 `estimated_cost_usd` / `estimated_cost_twd`，
 由 provider 的內建價目表估算；模型不在價目表中時為 `null`，不得猜測數字。

@@ -18,7 +18,11 @@ API_KEY_ENV_VARS: Final[dict[str, tuple[str, ...]]] = {
     "anthropic": ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"),
     "openai": ("OPENAI_API_KEY",),
     "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    "huggingface": ("HF_TOKEN", "HUGGINGFACE_API_KEY", "HUGGINGFACEHUB_API_TOKEN"),
 }
+
+#: CLI ``analyze`` 未指定 ``--models`` 時使用的別名。走 Hugging Face 免費額度。
+DEFAULT_MODEL_TOKEN: Final[str] = "hf"
 
 #: 送進 LLM 前，圖片長邊縮到的上限（px）。Claude 對超過 1568px 的圖會自行縮放，
 #: 先在本地縮好可以省下上傳流量與 token。
@@ -40,8 +44,10 @@ SUMMARY_MIN_CHARS: Final[int] = 60
 #: 每個模型要產生幾個不同角度的摘要版本供挑選。
 SUMMARY_VARIANT_COUNT: Final[int] = 3
 
-#: alt 文字的字元上限。
-ALT_MAX_CHARS: Final[int] = 125
+#: alt 文字的字元上限。螢幕閱讀器是逐字唸出 alt 的，過長的描述聽起來很痛苦；
+#: 圖片本身的細節應該寫在正文，alt 只要一句話交代這張圖在講什麼。
+#: 需要更長的描述時用 ``--alt-max`` 放寬。
+ALT_MAX_CHARS: Final[int] = 30
 
 #: 擷取圖片上下文時，前後各取的字元數。
 CONTEXT_RADIUS: Final[int] = 600

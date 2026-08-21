@@ -5,11 +5,13 @@
 * 圖片引用會連同**在正文中的字元位置**一起記錄，apply 階段才能做精準替換，
   不會像全域字串取代那樣誤傷同名文字或互為前綴的檔名。
 * 程式碼區塊（圍籬與行內）內的圖片語法會被忽略，避免教學文章裡的範例被改到。
-* 位置皆相對於「去掉 front matter 之後的正文」，回寫時搭配 frontmatter 序列化即可。
+* 位置皆相對於「去掉 front matter 之後的正文」，回寫時把新正文接回原檔，
+  既有的 front matter 原樣保留。
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -118,6 +120,26 @@ class ParsedArticle:
     language: str
     word_count: int
     targets: list[ImageTarget]
+
+    @property
+    def content_hash(self) -> str:
+        """正文的 sha256，見 :func:`compute_content_hash`。"""
+        return compute_content_hash(self.content)
+
+
+def compute_content_hash(content: str) -> str:
+    """計算正文的 sha256。
+
+    只涵蓋去掉 front matter 之後的正文，因為 apply 只改正文裡的圖片語法，
+    不改 front matter。
+
+    Args:
+        content: 去掉 front matter 之後的正文。
+
+    Returns:
+        小寫十六進位的雜湊字串。
+    """
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
 def _mask_code(content: str) -> str:

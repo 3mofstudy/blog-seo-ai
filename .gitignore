@@ -9,11 +9,23 @@ wheels/
 # Virtual environments
 .venv
 
+# Secrets
 .env
+.env.*
+!.env.example
 
-# Next.js
-node_modules/
-.next/
-out/
-npm-debug.log*
-.env*.local
+# CLI analysis / review output
+output/
+
+# Test and linter caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

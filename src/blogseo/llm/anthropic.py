@@ -198,7 +198,9 @@ class AnthropicProvider(BaseProvider):
             {"type": "text", "text": image_user_prompt(context, original_filename)},
         ]
         return self._parse(
-            system=image_system_prompt(self.alt_language),
+            system=image_system_prompt(
+                self.alt_language, alt_max_chars=self.alt_max_chars
+            ),
             blocks=blocks,
             output_format=ImageAnalysisResult,
             max_tokens=self._IMAGE_MAX_TOKENS,

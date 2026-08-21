@@ -402,6 +402,21 @@ def test_summary_range_is_recorded_in_metadata(
     assert result.metadata.summary_max_chars == 120
 
 
+def test_alt_max_is_recorded_and_lengths_match(
+    tmp_path: Path, stub_factory: dict[str, Any]
+) -> None:
+    article = parse_article(_make_article(tmp_path, image_count=1))
+    result = analyze_article(
+        article, AnalyzeOptions(model_tokens=["claude"], alt_max_chars=30)
+    )
+
+    assert result.metadata.alt_max_chars == 30
+    entry = next(iter(result.images.values()))
+    analysis = entry.models["claude"]
+    assert analysis.result is not None
+    assert analysis.alt_length == len(analysis.result.alt)
+
+
 def test_registry_rejects_unknown_alias() -> None:
     with pytest.raises(ConfigError, match="未知的模型別名"):
         parse_token("llama")
@@ -413,6 +428,15 @@ def test_registry_parses_model_override() -> None:
     assert model == "claude-opus-5"
 
 
+def test_registry_parses_huggingface_alias() -> None:
+    spec, model = parse_token("hf")
+    assert spec.key == "huggingface"
+    assert model is None
+    spec, model = parse_token("qwen:Qwen/Qwen2.5-VL-3B-Instruct")
+    assert spec.key == "huggingface"
+    assert model == "Qwen/Qwen2.5-VL-3B-Instruct"
+
+
 def test_registry_reports_unimplemented_provider() -> None:
     with pytest.raises(ConfigError, match="尚未完成"):
         create_provider("gpt")
@@ -420,5 +444,8 @@ def test_registry_reports_unimplemented_provider() -> None:
 
 def test_parse_model_tokens_dedupes_and_requires_value() -> None:
     assert parse_model_tokens(" claude , GPT ,claude") == ["claude", "gpt"]
+    assert parse_model_tokens("hf:Qwen/Qwen2.5-VL-7B-Instruct") == [
+        "hf:Qwen/Qwen2.5-VL-7B-Instruct"
+    ]
     with pytest.raises(ConfigError):
         parse_model_tokens("  ,  ")

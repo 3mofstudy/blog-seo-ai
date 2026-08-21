@@ -31,6 +31,28 @@ class ImageProcessingError(BlogSeoError):
     """圖片讀取、解碼或縮圖失敗。"""
 
 
+class AnalysisLoadError(BlogSeoError):
+    """analysis JSON 讀不到、不是合法 JSON，或結構版本不相容。"""
+
+
+class SelectionError(BlogSeoError):
+    """review 階段無法產生有效的選擇結果。
+
+    例如沒有任何可挑的候選，或檔名衝突未解決。
+    """
+
+
+class SelectionLoadError(BlogSeoError):
+    """selection JSON 讀不到、不是合法 JSON，或結構版本不相容。"""
+
+
+class ApplyError(BlogSeoError):
+    """apply 階段無法安全套用。
+
+    例如文章在分析之後被改過、圖片檔找不到，或目標檔名會覆蓋既有檔案。
+    """
+
+
 class ProviderError(BlogSeoError):
     """LLM provider 呼叫失敗。
 
