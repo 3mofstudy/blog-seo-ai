@@ -61,14 +61,15 @@ class HuggingFaceProvider(BaseProvider):
     _TEXT_MAX_TOKENS: ClassVar[int] = 2048
     _IMAGE_MAX_TOKENS: ClassVar[int] = 1024
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, *, image_model: str | None = None, **kwargs: Any) -> None:
         """初始化 provider，分別建立文字與圖片的 Hub client。
 
         Args:
+            image_model: 覆寫圖片模型 id；未指定時使用 :attr:`default_image_model`。
             **kwargs: 傳給 :class:`~blogseo.llm.base.BaseProvider` 的參數。
         """
         super().__init__(**kwargs)
-        self._image_model = self.default_image_model
+        self._image_model = image_model or self.default_image_model
         self._text_client = InferenceClient(
             provider="nscale",
             api_key=self._api_key,
@@ -108,6 +109,7 @@ class HuggingFaceProvider(BaseProvider):
                         self.language,
                         include_keywords=AnalysisField.KEYWORDS in self.fields,
                         include_summaries=AnalysisField.SUMMARY in self.fields,
+                        keyword_count=self.keyword_count,
                         summary_count=self.summary_count,
                         summary_min_chars=self.summary_min_chars,
                         summary_max_chars=self.summary_max_chars,
@@ -119,7 +121,7 @@ class HuggingFaceProvider(BaseProvider):
             max_tokens=self._TEXT_MAX_TOKENS,
             response_format=_json_schema_format(schema),
         )
-        return self._limit_summaries(KeywordSummaryResult.from_payload(payload))
+        return self._limit_text_result(KeywordSummaryResult.from_payload(payload))
 
     def analyze_image(
         self,

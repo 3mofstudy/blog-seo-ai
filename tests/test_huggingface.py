@@ -121,6 +121,24 @@ def test_text_and_image_use_different_models() -> None:
     assert provider.text_model != provider.image_model
 
 
+def test_image_model_can_be_overridden() -> None:
+    provider = HuggingFaceProvider(
+        api_key="hf-test-token", image_model="zai-org/Custom-VL"
+    )
+    assert provider.image_model == "zai-org/Custom-VL"
+    assert provider.text_model == HuggingFaceProvider.default_model
+
+
+def test_create_provider_image_role_overrides_hf_vision_model() -> None:
+    from blogseo.llm.registry import create_provider
+
+    provider = create_provider(
+        "hf:custom-vl", role="image", api_key="hf-test-token"
+    )
+    assert provider.image_model == "custom-vl"
+    assert provider.text_model == HuggingFaceProvider.default_model
+
+
 def test_analyze_image_accepts_filename_alias() -> None:
     fake = _FakeClient(
         _completion('{"filename": "AWS Console MFA", "alt": "安全憑證選項"}')

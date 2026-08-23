@@ -14,7 +14,7 @@ alwaysApply: true
   `apply`（依選擇結果實際 rename + 改寫 md 圖片語法與 alt）
 
 ## 技術堆疊
-- Python + uv 管理環境
+- Python + uv 管理開發環境（使用者安裝用 pipx / pip，不必裝 uv）
 - CLI 框架：typer
 - 各 LLM 官方 SDK：anthropic, openai, google-genai
 - 輸出：rich 做表格顯示；結構化結果一律先落地成 JSON

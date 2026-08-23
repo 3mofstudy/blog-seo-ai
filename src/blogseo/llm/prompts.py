@@ -73,6 +73,7 @@ def text_system_prompt(
     *,
     include_keywords: bool = True,
     include_summaries: bool = True,
+    keyword_count: int = KEYWORD_COUNT,
     summary_count: int = SUMMARY_VARIANT_COUNT,
     summary_min_chars: int = SUMMARY_MIN_CHARS,
     summary_max_chars: int = SUMMARY_MAX_CHARS,
@@ -86,6 +87,7 @@ def text_system_prompt(
         language: 文章語言代碼。
         include_keywords: 是否要產生關鍵字。
         include_summaries: 是否要產生摘要。
+        keyword_count: 要產生幾個關鍵字。
         summary_count: 要產生幾個摘要版本。
         summary_min_chars: 每則摘要的字元下限。
         summary_max_chars: 每則摘要的字元上限。
@@ -104,7 +106,7 @@ def text_system_prompt(
 
     goals: list[str] = []
     if include_keywords:
-        goals.append(f"{KEYWORD_COUNT} 個關鍵字")
+        goals.append(f"{keyword_count} 個關鍵字")
     if include_summaries:
         goals.append(f"{plural} meta description")
 

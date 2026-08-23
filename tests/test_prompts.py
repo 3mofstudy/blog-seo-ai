@@ -23,6 +23,11 @@ def test_prompt_states_the_configured_range() -> None:
     assert "標點符號與空白各算一個字元" in prompt
 
 
+def test_prompt_states_keyword_count() -> None:
+    prompt = text_system_prompt("zh", keyword_count=8)
+    assert "8 個關鍵字" in prompt
+
+
 def test_prompt_lists_distinct_angles_for_each_variant() -> None:
     prompt = text_system_prompt("zh", summary_count=3)
 
@@ -64,12 +69,20 @@ def test_summaries_are_cleaned(raw: list[str], expected: list[str]) -> None:
     assert result.summaries == expected
 
 
-def test_keywords_are_capped_and_deduped() -> None:
+def test_keywords_are_deduped() -> None:
     result = KeywordSummaryResult(
         keywords=["#一", "一", "二", "三", "四", "五", "六"],
         summaries=["摘要"],
     )
-    assert result.keywords == ["一", "二", "三", "四", "五"]
+    assert result.keywords == ["一", "二", "三", "四", "五", "六"]
+
+
+def test_keywords_are_capped_at_schema_max() -> None:
+    result = KeywordSummaryResult(
+        keywords=[str(index) for index in range(25)],
+        summaries=["摘要"],
+    )
+    assert result.keywords == [str(index) for index in range(20)]
 
 
 @pytest.mark.parametrize(

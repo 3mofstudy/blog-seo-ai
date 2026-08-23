@@ -11,10 +11,19 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from blogseo.errors import ConfigError, UnknownProviderError
 from blogseo.llm.base import BaseProvider
+
+ModelRole = Literal["text", "image"]
+
+_PROVIDER_LABELS: Final[dict[str, str]] = {
+    "anthropic": "Claude",
+    "huggingface": "Hugging Face",
+    "openai": "OpenAI",
+    "gemini": "Gemini",
+}
 
 
 @dataclass(frozen=True)
@@ -72,6 +81,122 @@ _ALIAS_INDEX: Final[dict[str, ProviderSpec]] = {
 }
 
 
+@dataclass(frozen=True)
+class ModelPreset:
+    """設定選單上的一筆已實作預設模型。
+
+    Attributes:
+        token: 寫進設定檔的字串，含別名與型號，例如 ``hf:Qwen/Qwen3-4B-Instruct-2507``。
+        provider_key: provider 正式名稱。
+        provider_label: 給人看的供應商名稱。
+        alias: 第一個別名（選單用，避免 hf / huggingface 重複）。
+        model_id: 實際模型型號。
+        note: 補充說明，例如免費額度。
+    """
+
+    token: str
+    provider_key: str
+    provider_label: str
+    alias: str
+    model_id: str
+    note: str = ""
+
+
+def _load_provider_class(spec: ProviderSpec) -> type[BaseProvider] | None:
+    """載入已實作的 provider 類別；模組或類別不存在時回傳 ``None``。"""
+    try:
+        module = importlib.import_module(spec.module)
+    except ImportError:
+        return None
+    provider_class = getattr(module, spec.class_name, None)
+    if provider_class is None:
+        return None
+    return provider_class
+
+
+def _default_model_id(spec: ProviderSpec, role: ModelRole) -> str:
+    """讀取 provider 類別上的預設型號。尚未實作時回傳空字串。"""
+    provider_class = _load_provider_class(spec)
+    if provider_class is None:
+        return ""
+    if role == "image":
+        return getattr(provider_class, "default_image_model", None) or provider_class.default_model
+    return provider_class.default_model
+
+
+def list_model_presets(role: ModelRole) -> list[ModelPreset]:
+    """列出已實作 provider 的預設型號，每個供應商一筆。
+
+    設定選單用這個清單，而不是把 hf、huggingface、qwen 等別名全列出來。
+    OpenAI、Gemini 尚未實作，不會出現。
+    """
+    presets: list[ModelPreset] = []
+    for spec in _SPECS:
+        model_id = _default_model_id(spec, role)
+        if not model_id:
+            continue
+        alias = spec.aliases[0]
+        note = "免費額度" if spec.key == "huggingface" else ""
+        presets.append(
+            ModelPreset(
+                token=f"{alias}:{model_id}",
+                provider_key=spec.key,
+                provider_label=_PROVIDER_LABELS.get(spec.key, spec.key),
+                alias=alias,
+                model_id=model_id,
+                note=note,
+            )
+        )
+    return presets
+
+
+def format_model_token(token: str, *, role: ModelRole = "text") -> str:
+    """把設定值顯示成「別名（型號）」。
+
+    只寫 ``hf`` 時會補上該用途的預設型號，讓選單看得出實際用哪一顆。
+    """
+    spec, model = parse_token(token)
+    resolved = model or _default_model_id(spec, role) or "（尚未實作）"
+    alias = spec.aliases[0]
+    return f"{alias}（{resolved}）"
+
+
+def token_matches_preset(token: str, preset: ModelPreset, *, role: ModelRole) -> bool:
+    """判斷目前設定是否屬於這個供應商（型號可以不同）。"""
+    del role
+    spec, _model = parse_token(token)
+    return spec.key == preset.provider_key
+
+
+def suggested_model_id(token: str, preset: ModelPreset, *, role: ModelRole) -> str:
+    """輸入框的預設值：已選這家就沿用目前型號，否則用內建預設。"""
+    spec, model = parse_token(token)
+    if spec.key == preset.provider_key and model:
+        return model
+    return preset.model_id
+
+
+def normalize_typed_model_id(raw: str, preset: ModelPreset) -> str:
+    """把使用者打的型號整理成純模型 id。
+
+    可只打 ``claude-opus-5``，也可打 ``claude:claude-opus-5``。
+    若冠上別家供應商的別名則拒絕。
+    """
+    text = raw.strip()
+    if not text:
+        raise ConfigError("請輸入型號名稱")
+    if ":" not in text:
+        return text
+    spec, model = parse_token(text)
+    if spec.key != preset.provider_key:
+        raise ConfigError(
+            f"這是 {preset.provider_label} 的型號，不能填 {spec.aliases[0]} 的值"
+        )
+    if not model:
+        raise ConfigError("請輸入型號名稱")
+    return model
+
+
 def known_aliases() -> list[str]:
     """列出所有可用的別名。
 
@@ -104,11 +229,13 @@ def parse_token(token: str) -> tuple[ProviderSpec, str | None]:
     return spec, model or None
 
 
-def create_provider(token: str, **kwargs: Any) -> BaseProvider:
+def create_provider(token: str, *, role: str = "both", **kwargs: Any) -> BaseProvider:
     """依別名建立 provider 實例。
 
     Args:
         token: ``別名`` 或 ``別名:模型id``。
+        role: ``text``、``image`` 或 ``both``。Hugging Face 的模型覆寫
+            在 ``image`` 時套到圖片模型，其餘套到文字模型。
         **kwargs: 傳給 provider 建構子的參數。
 
     Returns:
@@ -132,7 +259,10 @@ def create_provider(token: str, **kwargs: Any) -> BaseProvider:
         raise ConfigError(f"{spec.key} 的實作尚未完成（找不到 {spec.class_name}）")
 
     if model_override is not None:
-        kwargs["model"] = model_override
+        if role == "image" and spec.key == "huggingface":
+            kwargs.setdefault("image_model", model_override)
+        else:
+            kwargs.setdefault("model", model_override)
     return provider_class(**kwargs)
 
 

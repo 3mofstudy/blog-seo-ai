@@ -19,6 +19,7 @@ from blogseo import __version__
 from blogseo.config import (
     ALT_MAX_CHARS,
     CONTEXT_RADIUS,
+    KEYWORD_COUNT,
     SUMMARY_MAX_CHARS,
     SUMMARY_MIN_CHARS,
     SUMMARY_VARIANT_COUNT,
@@ -43,6 +44,7 @@ from blogseo.schemas.result import (
     ModelKeywordSummary,
     ModelUsage,
 )
+from blogseo.settings import AppSettings
 
 #: 進度回呼：(已完成數, 總數, 說明文字)。
 ProgressCallback = Callable[[int, int, str], None]
@@ -54,8 +56,12 @@ class AnalyzeOptions:
 
     Attributes:
         model_tokens: 要使用的模型別名清單，可含 ``別名:模型id`` 覆寫。
+            未另外指定 ``text_tokens`` / ``image_tokens`` 時，文字與圖片都用這份。
         fields: 這次要產生的項目。
+        text_tokens: 關鍵字／摘要專用的模型；``None`` 表示沿用 ``model_tokens``。
+        image_tokens: 圖片分析專用的模型；``None`` 表示沿用 ``model_tokens``。
         alt_language: alt 使用的語言，``auto`` 表示跟隨文章語言。
+        keyword_count: 每個模型要產生幾個關鍵字。
         summary_count: 每個模型要產生幾個不同角度的摘要版本。
         summary_min_chars: 每則摘要的字元下限。
         summary_max_chars: 每則摘要的字元上限。
@@ -69,7 +75,10 @@ class AnalyzeOptions:
 
     model_tokens: list[str]
     fields: frozenset[AnalysisField] = DEFAULT_FIELDS
+    text_tokens: list[str] | None = None
+    image_tokens: list[str] | None = None
     alt_language: str = "auto"
+    keyword_count: int = KEYWORD_COUNT
     summary_count: int = SUMMARY_VARIANT_COUNT
     summary_min_chars: int = SUMMARY_MIN_CHARS
     summary_max_chars: int = SUMMARY_MAX_CHARS
@@ -89,6 +98,18 @@ class AnalyzeOptions:
     def wants_images(self) -> bool:
         """是否需要呼叫圖片分析。"""
         return AnalysisField.IMAGES in self.fields
+
+    def tokens_for_text(self) -> list[str]:
+        """關鍵字／摘要實際使用的模型別名。"""
+        if self.text_tokens is not None:
+            return self.text_tokens
+        return self.model_tokens
+
+    def tokens_for_image(self) -> list[str]:
+        """圖片分析實際使用的模型別名。"""
+        if self.image_tokens is not None:
+            return self.image_tokens
+        return self.model_tokens
 
 
 def parse_fields(raw: str) -> frozenset[AnalysisField]:
@@ -127,6 +148,41 @@ def parse_fields(raw: str) -> frozenset[AnalysisField]:
     return frozenset(selected)
 
 
+def options_from_settings(
+    settings: AppSettings, *, fields: frozenset[AnalysisField]
+) -> AnalyzeOptions:
+    """依 ``blogseo.json`` 組出一次分析的選項。
+
+    Args:
+        settings: 使用者設定。
+        fields: 這次要產生的項目。
+
+    Returns:
+        可交給 :func:`analyze_article` 的選項。
+    """
+    from blogseo.llm.registry import parse_model_tokens
+
+    text_tokens = parse_model_tokens(settings.models.text)
+    image_tokens = parse_model_tokens(settings.models.image)
+    return AnalyzeOptions(
+        model_tokens=list(dict.fromkeys([*text_tokens, *image_tokens])),
+        fields=fields,
+        text_tokens=text_tokens,
+        image_tokens=image_tokens,
+        alt_language=settings.alt.language,
+        keyword_count=settings.keywords.count,
+        summary_count=settings.summary.count,
+        summary_min_chars=settings.summary.min_chars,
+        summary_max_chars=settings.summary.max_chars,
+        alt_max_chars=settings.alt.max_chars,
+        max_images=settings.analyze.max_images,
+        concurrency=settings.analyze.concurrency,
+        context_radius=settings.analyze.context_radius,
+        timeout=settings.analyze.timeout_seconds,
+        usd_to_twd_rate=settings.cost.usd_to_twd_rate,
+    )
+
+
 @dataclass
 class _ImageJob:
     """一張待分析圖片的準備結果。"""
@@ -146,6 +202,8 @@ class _ProviderSlot:
     provider: BaseProvider | None
     model_id: str
     error: str | None = None
+    run_text: bool = True
+    run_image: bool = True
 
 
 def _display_model_id(provider: BaseProvider) -> str:
@@ -232,6 +290,7 @@ def _build_slots(article: ParsedArticle, options: AnalyzeOptions) -> list[_Provi
     """建立每個模型別名對應的 provider。
 
     建立失敗（例如金鑰缺漏）不會中斷流程，而是記成該別名的錯誤。
+    文字與圖片可以使用不同的模型；同一個 token 只會建立一個實例。
 
     Args:
         article: 已解析的文章，用來決定語言。
@@ -246,15 +305,28 @@ def _build_slots(article: ParsedArticle, options: AnalyzeOptions) -> list[_Provi
     alt_language = (
         article.language if options.alt_language == "auto" else options.alt_language
     )
+    text_tokens = options.tokens_for_text() if options.wants_text else []
+    image_tokens = options.tokens_for_image() if options.wants_images else []
+    ordered = list(dict.fromkeys([*text_tokens, *image_tokens]))
     slots: list[_ProviderSlot] = []
 
-    for token in options.model_tokens:
+    for token in ordered:
+        run_text = token in text_tokens
+        run_image = token in image_tokens
+        if run_text and run_image:
+            role = "both"
+        elif run_image:
+            role = "image"
+        else:
+            role = "text"
         try:
             provider = create_provider(
                 token,
+                role=role,
                 language=article.language,
                 alt_language=alt_language,
                 fields=options.fields,
+                keyword_count=options.keyword_count,
                 summary_count=options.summary_count,
                 summary_min_chars=options.summary_min_chars,
                 summary_max_chars=options.summary_max_chars,
@@ -263,7 +335,14 @@ def _build_slots(article: ParsedArticle, options: AnalyzeOptions) -> list[_Provi
             )
         except BlogSeoError as exc:
             slots.append(
-                _ProviderSlot(token=token, provider=None, model_id="", error=str(exc))
+                _ProviderSlot(
+                    token=token,
+                    provider=None,
+                    model_id="",
+                    error=str(exc),
+                    run_text=run_text,
+                    run_image=run_image,
+                )
             )
             continue
         slots.append(
@@ -271,6 +350,8 @@ def _build_slots(article: ParsedArticle, options: AnalyzeOptions) -> list[_Provi
                 token=token,
                 provider=provider,
                 model_id=_display_model_id(provider),
+                run_text=run_text,
+                run_image=run_image,
             )
         )
 
@@ -373,18 +454,21 @@ def analyze_article(
     for slot in slots:
         if slot.provider is None:
             placeholder = slot.model_id or "（未建立）"
-            if options.wants_text:
+            if slot.run_text:
                 keyword_summary[slot.token] = ModelKeywordSummary(
                     model_id=placeholder, error=slot.error
                 )
-            for entry in entries.values():
-                if entry.skipped_reason is None:
-                    entry.models[slot.token] = ModelImageAnalysis(
-                        model_id=placeholder, error=slot.error
-                    )
+            if slot.run_image:
+                for entry in entries.values():
+                    if entry.skipped_reason is None:
+                        entry.models[slot.token] = ModelImageAnalysis(
+                            model_id=placeholder, error=slot.error
+                        )
 
-    text_jobs_per_slot = 1 if options.wants_text else 0
-    total_jobs = len(usable_slots) * (text_jobs_per_slot + len(image_jobs))
+    total_jobs = sum(
+        (1 if slot.run_text else 0) + (len(image_jobs) if slot.run_image else 0)
+        for slot in usable_slots
+    )
     completed = 0
 
     def report(label: str) -> None:
@@ -398,12 +482,13 @@ def analyze_article(
             futures: dict[object, tuple[str, str, _ImageJob | None]] = {}
 
             for slot in usable_slots:
-                if options.wants_text:
+                if slot.run_text:
                     future = pool.submit(_run_text_job, slot, article)
                     futures[future] = (slot.token, "text", None)
-                for job in image_jobs:
-                    image_future = pool.submit(_run_image_job, slot, job)
-                    futures[image_future] = (slot.token, "image", job)
+                if slot.run_image:
+                    for job in image_jobs:
+                        image_future = pool.submit(_run_image_job, slot, job)
+                        futures[image_future] = (slot.token, "image", job)
 
             for future in as_completed(futures):
                 token, kind, job = futures[future]

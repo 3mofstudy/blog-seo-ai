@@ -8,6 +8,7 @@ from blogseo.errors import ApplyError
 from blogseo.markdown.updater import (
     apply_spans,
     join_source_path,
+    rewrite_front_matter,
     rewrite_html_image,
     rewrite_image_markup,
     rewrite_markdown_image,
@@ -106,3 +107,33 @@ def test_splice_body_without_front_matter() -> None:
     original = "![](images/a.png)\n"
     result = splice_body(original, "![](images/a.png)", "![說明](images/a.png)")
     assert result == "![說明](images/a.png)\n"
+
+
+def test_rewrite_front_matter_creates_block() -> None:
+    result = rewrite_front_matter(
+        "# 標題\n\n內文。\n",
+        keywords=["甲", "乙"],
+        summary="這是摘要",
+    )
+    assert result.startswith("---")
+    assert "甲" in result
+    assert "乙" in result
+    assert "這是摘要" in result
+    assert "# 標題" in result
+
+
+def test_rewrite_front_matter_keeps_other_keys() -> None:
+    original = "---\ntitle: 原標題\ndate: 2026-01-01\n---\n\n正文\n"
+    result = rewrite_front_matter(
+        original, keywords=["關鍵字"], summary="摘要文字", keywords_key="tags"
+    )
+    assert "title: 原標題" in result or "title: '原標題'" in result or 'title: "原標題"' in result
+    assert "date:" in result
+    assert "關鍵字" in result
+    assert "摘要文字" in result
+    assert "正文" in result
+
+
+def test_rewrite_front_matter_skips_empty_values() -> None:
+    original = "# 標題\n"
+    assert rewrite_front_matter(original, keywords=[], summary="") == original

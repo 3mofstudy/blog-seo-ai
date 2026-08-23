@@ -348,7 +348,7 @@ def test_cli_dry_run_does_not_write(tmp_path: Path) -> None:
         ),
     )
     original = markdown_path.read_text(encoding="utf-8")
-    outcome = runner.invoke(app, ["apply", str(selection_path), "--dry-run"])
+    outcome = runner.invoke(app, ["apply", str(selection_path), "--dry-run", "--no-front-matter"])
     assert outcome.exit_code == 0, outcome.output
     assert "預覽" in outcome.output
     assert markdown_path.read_text(encoding="utf-8") == original
@@ -378,7 +378,7 @@ def test_cli_apply_yes(tmp_path: Path) -> None:
         ),
     )
     outcome = runner.invoke(
-        app, ["apply", str(selection_path), "--yes", "--backup"]
+        app, ["apply", str(selection_path), "--yes", "--backup", "--no-front-matter"]
     )
     assert outcome.exit_code == 0, outcome.output
     text = markdown_path.read_text(encoding="utf-8")
@@ -387,6 +387,55 @@ def test_cli_apply_yes(tmp_path: Path) -> None:
     assert "description:" not in text
     assert (tmp_path / "post.md.bak").is_file()
     assert (tmp_path / "images" / "chart.png").is_file()
+
+
+def test_cli_writes_front_matter_when_requested(tmp_path: Path) -> None:
+    markdown_path = _make_article(
+        tmp_path, "![](images/a.png)\n", images=("images/a.png",)
+    )
+    selection_path = _write_selection(
+        tmp_path,
+        _selection_for(
+            markdown_path,
+            keywords=["甲", "乙"],
+            summary="這是一段用來寫進 description 的摘要內容。",
+            images={
+                "images/a.png": SelectionImage(
+                    source="images/a.png",
+                    resolved_path=str(tmp_path / "images" / "a.png"),
+                    alt="說明",
+                    alt_model="claude",
+                )
+            },
+        ),
+    )
+    outcome = runner.invoke(
+        app, ["apply", str(selection_path), "--yes", "--front-matter"]
+    )
+    assert outcome.exit_code == 0, outcome.output
+    text = markdown_path.read_text(encoding="utf-8")
+    assert text.startswith("---")
+    assert "甲" in text
+    assert "乙" in text
+    assert "這是一段用來寫進 description 的摘要內容。" in text
+    assert "![說明](images/a.png)" in text
+
+
+def test_build_plan_writes_front_matter_on_request(tmp_path: Path) -> None:
+    markdown_path = _make_article(tmp_path, "---\ntitle: 原標題\n---\n\n內文。\n")
+    selection = _selection_for(
+        markdown_path,
+        keywords=["關鍵字一"],
+        summary="這是摘要。",
+    )
+    plan = build_plan(selection, write_front_matter=True)
+    assert plan.front_matter_updates["keywords"] == ["關鍵字一"]
+    assert plan.front_matter_updates["description"] == "這是摘要。"
+    execute_plan(plan)
+    text = markdown_path.read_text(encoding="utf-8")
+    assert "關鍵字一" in text
+    assert "這是摘要。" in text
+    assert "title:" in text
 
 
 def test_cli_refuses_without_force_when_changed(tmp_path: Path) -> None:

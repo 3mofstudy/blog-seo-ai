@@ -25,6 +25,7 @@ from blogseo.markdown.parser import (
 from blogseo.markdown.updater import (
     apply_spans,
     join_source_path,
+    rewrite_front_matter,
     rewrite_image_markup,
     splice_body,
 )
@@ -70,12 +71,17 @@ class ApplyPlan:
     new_text: str
     markup_changes: list[MarkupChange] = field(default_factory=list)
     renames: list[RenameChange] = field(default_factory=list)
+    front_matter_updates: dict[str, object] = field(default_factory=dict)
     hash_mismatch: bool = False
 
     @property
     def is_empty(self) -> bool:
         """沒有任何要寫入的變更。"""
-        return not self.markup_changes and not self.renames
+        return (
+            not self.markup_changes
+            and not self.renames
+            and not self.front_matter_updates
+        )
 
 
 def _parse_schema_version(raw: str) -> tuple[int, int]:
@@ -207,13 +213,23 @@ def _markup_path(reference_source: str, new_filename: str | None) -> str | None:
     return join_source_path(reference_source, new_filename)
 
 
-def build_plan(selection: Selection, *, force: bool = False) -> ApplyPlan:
+def build_plan(
+    selection: Selection,
+    *,
+    force: bool = False,
+    write_front_matter: bool = False,
+    keywords_key: str = "keywords",
+    summary_key: str = "description",
+) -> ApplyPlan:
     """讀取文章、核對雜湊，組出要寫入的變更。
 
     Args:
         selection: 選擇結果。
         force: 正文雜湊不一致時是否繼續。以當下重新解析的位置替換，
             而不是分析當時記下的位置。
+        write_front_matter: 是否把關鍵字與摘要寫進 YAML front matter。
+        keywords_key: front matter 裡關鍵字的欄位名。
+        summary_key: front matter 裡摘要的欄位名。
 
     Returns:
         套用計畫。
@@ -305,12 +321,28 @@ def build_plan(selection: Selection, *, force: bool = False) -> ApplyPlan:
         else original_text
     )
 
+    front_matter_updates: dict[str, object] = {}
+    if write_front_matter:
+        if selection.keywords:
+            front_matter_updates[keywords_key] = list(selection.keywords)
+        if selection.summary:
+            front_matter_updates[summary_key] = selection.summary
+        if front_matter_updates:
+            new_text = rewrite_front_matter(
+                new_text,
+                keywords=selection.keywords or None,
+                summary=selection.summary or None,
+                keywords_key=keywords_key,
+                summary_key=summary_key,
+            )
+
     return ApplyPlan(
         article_path=article_path,
         original_text=original_text,
         new_text=new_text,
         markup_changes=markup_changes,
         renames=renames,
+        front_matter_updates=front_matter_updates,
         hash_mismatch=hash_mismatch,
     )
 

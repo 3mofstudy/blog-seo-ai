@@ -18,8 +18,12 @@ dependencies = [
     "huggingface-hub>=1.28.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/3mofstudy/blog-seo-ai"
+Repository = "https://github.com/3mofstudy/blog-seo-ai"
+
 [project.scripts]
-blog-seo-ai = "blogseo.cli:app"
+blog-seo-ai = "blogseo.cli:main"
 
 [dependency-groups]
 dev = [

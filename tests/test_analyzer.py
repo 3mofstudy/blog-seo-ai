@@ -55,7 +55,7 @@ class _StubProvider(BaseProvider):
             payload["summaries"] = [
                 f"第 {index} 個角度的摘要內容" for index in range(1, 6)
             ]
-        return self._limit_summaries(KeywordSummaryResult(**payload))
+        return self._limit_text_result(KeywordSummaryResult(**payload))
 
     def analyze_image(
         self,
@@ -107,6 +107,7 @@ def stub_factory(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     config: dict[str, Any] = {}
 
     def fake_create(token: str, **kwargs: Any) -> BaseProvider:
+        kwargs.pop("role", None)
         setting = config.get(token, {})
         if "raises" in setting:
             raise setting["raises"]
@@ -437,6 +438,63 @@ def test_registry_parses_huggingface_alias() -> None:
     assert model == "Qwen/Qwen2.5-VL-3B-Instruct"
 
 
+def test_model_presets_one_row_per_implemented_provider_with_model_id() -> None:
+    from blogseo.llm.huggingface import HuggingFaceProvider
+    from blogseo.llm.registry import list_model_presets
+
+    text = list_model_presets("text")
+    image = list_model_presets("image")
+    assert [preset.alias for preset in text] == ["claude", "hf"]
+    assert [preset.alias for preset in image] == ["claude", "hf"]
+    assert {preset.provider_key for preset in text} == {"anthropic", "huggingface"}
+    hf_text = next(preset for preset in text if preset.alias == "hf")
+    hf_image = next(preset for preset in image if preset.alias == "hf")
+    assert hf_text.model_id == HuggingFaceProvider.default_model
+    assert hf_image.model_id == HuggingFaceProvider.default_image_model
+    assert hf_text.token == f"hf:{HuggingFaceProvider.default_model}"
+    assert hf_image.token == f"hf:{HuggingFaceProvider.default_image_model}"
+
+
+def test_format_model_token_fills_in_default_model_id() -> None:
+    from blogseo.llm.huggingface import HuggingFaceProvider
+    from blogseo.llm.registry import format_model_token
+
+    assert HuggingFaceProvider.default_model in format_model_token("hf", role="text")
+    assert HuggingFaceProvider.default_image_model in format_model_token(
+        "huggingface", role="image"
+    )
+    assert "claude-sonnet-5" in format_model_token("claude", role="text")
+    assert "claude-opus-5" in format_model_token("claude:claude-opus-5", role="text")
+
+
+def test_suggested_model_id_keeps_current_when_same_provider() -> None:
+    from blogseo.llm.registry import list_model_presets, suggested_model_id
+
+    claude = next(preset for preset in list_model_presets("text") if preset.alias == "claude")
+    hf = next(preset for preset in list_model_presets("text") if preset.alias == "hf")
+    assert (
+        suggested_model_id("claude:claude-opus-5", claude, role="text")
+        == "claude-opus-5"
+    )
+    assert suggested_model_id("claude:claude-opus-5", hf, role="text") == hf.model_id
+    assert suggested_model_id("hf", hf, role="text") == hf.model_id
+
+
+def test_normalize_typed_model_id_accepts_plain_or_prefixed() -> None:
+    from blogseo.llm.registry import (
+        list_model_presets,
+        normalize_typed_model_id,
+    )
+
+    claude = next(preset for preset in list_model_presets("text") if preset.alias == "claude")
+    assert normalize_typed_model_id("claude-opus-5", claude) == "claude-opus-5"
+    assert (
+        normalize_typed_model_id("claude:claude-opus-5", claude) == "claude-opus-5"
+    )
+    with pytest.raises(ConfigError, match="不能填"):
+        normalize_typed_model_id("hf:Qwen/Qwen3-8B", claude)
+
+
 def test_registry_reports_unimplemented_provider() -> None:
     with pytest.raises(ConfigError, match="尚未完成"):
         create_provider("gpt")
@@ -449,3 +507,25 @@ def test_parse_model_tokens_dedupes_and_requires_value() -> None:
     ]
     with pytest.raises(ConfigError):
         parse_model_tokens("  ,  ")
+
+
+def test_text_and_image_can_use_different_models(
+    tmp_path: Path, stub_factory: dict[str, Any]
+) -> None:
+    article = parse_article(_make_article(tmp_path))
+    result = analyze_article(
+        article,
+        AnalyzeOptions(
+            model_tokens=["claude", "gpt"],
+            text_tokens=["claude"],
+            image_tokens=["gpt"],
+        ),
+    )
+
+    assert set(result.keyword_summary) == {"claude"}
+    assert result.keyword_summary["claude"].result is not None
+    for entry in result.images.values():
+        assert set(entry.models) == {"gpt"}
+        assert entry.models["gpt"].result is not None
+    assert result.metadata.models["claude"].calls == 1
+    assert result.metadata.models["gpt"].calls == 2

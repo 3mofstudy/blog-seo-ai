@@ -3,17 +3,20 @@
 本地端 CLI 工具：把部落格文章的 `.md` 丟進去，用 LLM 一次搞定事後最煩人的三件事——
 挑 SEO 關鍵字、寫 meta description、看懂圖片後給出有意義的檔名與 alt 文字。
 
-支援同時呼叫多個模型，結果並列輸出成 JSON，再用互動式的 `review` 逐項挑選；
-分析與挑選階段**絕不修改任何原始檔案**，真正改檔是 `apply`。
+啟動後先選要產出什麼，接著 **分析 → 挑選 → 套用** 一次跑完。
+分析與挑選階段**絕不修改任何原始檔案**；中間建議寫在 `output/`，可以手動改；
+真正改 `.md` 是最後的套用。
 
 ## 目前進度
 
 
-| 階段  | 指令        | 狀態                                   |
-| --- | --------- | ------------------------------------ |
-| 分析  | `analyze` | 可用（預設 Hugging Face 免費模型；也可指定 Claude） |
-| 挑選  | `review`  | 可用                                   |
-| 套用  | `apply`   | 可用                                   |
+| 階段    | 指令                         | 狀態                                   |
+| ----- | -------------------------- | ------------------------------------ |
+| 一次跑完  | `blog-seo-ai post.md` | 可用（互動選單）                             |
+| 分析    | `analyze`                  | 可用（預設 Hugging Face 免費模型；也可指定 Claude） |
+| 挑選    | `review`                   | 可用                                   |
+| 套用    | `apply`                    | 可用                                   |
+| 預設值   | `blogseo.json`             | 可用（也可在選單「其他設定」裡改）                    |
 
 
 Provider 方面，Anthropic（Claude）與 Hugging Face（文字 Qwen3-4B、圖片 GLM-4.6V-Flash）已完成；
@@ -21,84 +24,181 @@ OpenAI 與 Gemini 已在註冊表預留位置，尚未實作。
 
 ## 安裝
 
-需要 [uv](https://docs.astral.sh/uv/)。
+使用者**不必安裝 uv**。需要 Python 3.13 以上，裝完後在任何資料夾都能直接打 `blog-seo-ai`。
 
-```bash
-uv sync
+建議用 [pipx](https://pipx.pypa.io/)，它會把指令裝進獨立環境並加入 PATH：
+
+```bat
+python -m pip install --user pipx
+python -m pipx ensurepath
 ```
 
-金鑰放在專案根目錄的 `.env`：
+關掉終端機再開一個新的，然後從 GitHub 安裝：
+
+```bat
+pipx install git+https://github.com/3mofstudy/blog-seo-ai.git
+```
+
+或先 clone／下載 ZIP，再進該資料夾安裝一次即可，之後不必留在專案目錄：
+
+```bat
+cd path\to\blog-seo-ai
+pipx install .
+```
+
+不用 pipx 也可以：
+
+```bat
+pip install git+https://github.com/3mofstudy/blog-seo-ai.git
+```
+
+若 cmd 仍說找不到 `blog-seo-ai`，把 Python 的 Scripts 目錄加入 PATH。查路徑：
+
+```bat
+python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
+```
+
+### 金鑰
+
+可在程式裡選 **其他設定 → 5. 供應商金鑰** 逐家輸入。已設定的只顯示金鑰前十碼，尚未設定的欄位留白。金鑰會寫到使用者目錄的 `.env`，**不會**寫進 `blogseo.json`。
+
+也可以自行擇一：
+
+1. 系統環境變數 `HF_TOKEN`、`ANTHROPIC_API_KEY`
+2. 使用者設定目錄的 `.env`
+   - Windows：`%APPDATA%\blogseo\.env`
+   - macOS / Linux：`~/.config/blogseo/.env`
+3. 目前工作目錄往上的 `.env`（某個部落格資料夾專用）
 
 ```
-CLAUDE_API_KEY=sk-ant-...
-# 或使用 SDK 預設名稱
-# ANTHROPIC_API_KEY=sk-ant-...
-
 # Hugging Face 免費額度：https://huggingface.co/settings/tokens
 # 權限勾選「Make calls to Inference Providers」
 HF_TOKEN=hf_...
+
+CLAUDE_API_KEY=sk-ant-...
+# 或使用 SDK 預設名稱
+# ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-`.env` 已被 `.gitignore` 排除，不會進版控。
+`.env` 不要提交進版控。
 
 ## 使用
 
-```bash
-# 分析（預設 Hugging Face 免費模型）
-uv run blog-seo-ai analyze path/to/post.md
+裝完後，在**任何資料夾**執行：
 
-# 挑選（純本地，不花錢）
-uv run blog-seo-ai review output/post-analysis.json
-
-# 套用（會改 Markdown 與圖片檔名）
-uv run blog-seo-ai apply output/post-selection.json
+```bat
+blog-seo-ai
+blog-seo-ai path\to\post.md
 ```
 
+開始後會先跳出選單：
+
+1. 分析後，給出所有建議（摘要、關鍵字、圖片 SEO）
+2. 分析後，給出摘要
+3. 分析後，給出關鍵字
+4. 分析後，給出摘要 + 關鍵字
+5. 分析後，只圖片 SEO 建議
+6. 其他設定
+
+選 1–5 之後會依序：呼叫模型分析 → 把建議寫進 `output/` → 互動挑選 → 套用到 `.md`。
+分析 JSON 與選擇 JSON 都可以在下一步之前手動編輯。
+
+選 6 進入設定子選單，用來改預設模型、摘要字數、alt 上限等；變更會立刻寫回 `blogseo.json`。
+
+進階用法（腳本、CI）仍可拆開跑：
+
+```bash
+blog-seo-ai analyze path/to/post.md
+blog-seo-ai review output/post-analysis.json
+blog-seo-ai apply output/post-selection.json
+```
+
+### 預設值：`blogseo.json`
+
+所有人工可調的預設都在這份 JSON。**不必開 CLI**，直接改檔即可。
+尋找順序：環境變數 `BLOGSEO_SETTINGS` → 目前工作目錄往上的 `blogseo.json` → 使用者設定目錄（Windows 為 `%APPDATA%\blogseo\blogseo.json`）。
+沒寫的欄位用內建預設補齊。選單「其他設定」若找不到專案檔，會寫到使用者設定目錄。
+
+```json
+{
+  "models": {
+    "text": "hf",
+    "image": "hf"
+  },
+  "summary": {
+    "min_chars": 60,
+    "max_chars": 150,
+    "count": 3
+  },
+  "alt": {
+    "max_chars": 30,
+    "language": "auto"
+  }
+}
+```
+
+常見欄位：
+
+
+| 欄位 | 說明 |
+| --- | --- |
+| `models.text` | 關鍵字／摘要模型。選單先選供應商，再自行輸入型號（內建預設可直接 Enter）。`hf`、`huggingface`、`qwen` 是同一家 |
+| `models.image` | 圖片辨識模型，可與文字模型不同 |
+| `keywords.count` | 關鍵字數量 |
+| `summary.min_chars` / `max_chars` / `count` | 摘要字數範圍與則數 |
+| `alt.max_chars` / `language` | alt 字數上限與語言（`auto` 跟隨文章） |
+| `analyze.concurrency` / `timeout_seconds` / `max_images` | 平行數、逾時、最多分析幾張圖 |
+| `output.dir` | 中間產物目錄，預設 `output/` |
+| `cost.usd_to_twd_rate` | 花費換算匯率 |
+| `apply.write_front_matter` | 套用時是否把關鍵字／摘要寫進 YAML front matter |
+| `apply.keywords_key` / `summary_key` | front matter 欄位名，預設 `keywords`、`description` |
+| `apply.backup` | 套用前是否複製 `.bak` |
 
 
 ### analyze
 
 ```bash
-# 基本用法：關鍵字/摘要用 Qwen3-4B，圖片用 GLM-4.6V-Flash
-uv run blog-seo-ai analyze path/to/post.md
+# 基本用法：文字／圖片模型分別讀 blogseo.json
+blog-seo-ai analyze path/to/post.md
 
-# 只覆寫文字模型（圖片仍用 GLM-4.6V-Flash）
-uv run blog-seo-ai analyze post.md --models hf:Qwen/Qwen3-8B
+# 覆寫這次使用的模型（文字與圖片都用同一組）
+blog-seo-ai analyze post.md --models hf:Qwen/Qwen3-8B
 
 # 改走 Claude（會計費）
-uv run blog-seo-ai analyze post.md --models claude
+blog-seo-ai analyze post.md --models claude
 
 # 只要其中幾樣：關鍵字、摘要、圖片可自由組合
-uv run blog-seo-ai analyze post.md --fields keywords
-uv run blog-seo-ai analyze post.md --fields keywords,summary
+blog-seo-ai analyze post.md --fields keywords
+blog-seo-ai analyze post.md --fields keywords,summary
 
 # 控制花費：只分析前 3 張圖
-uv run blog-seo-ai analyze post.md --max-images 3
+blog-seo-ai analyze post.md --max-images 3
 
 # 文章是中文但 alt 想用英文
-uv run blog-seo-ai analyze post.md --alt-lang en
+blog-seo-ai analyze post.md --alt-lang en
 
 # 列出可用的模型別名
-uv run blog-seo-ai providers
+blog-seo-ai providers
 ```
 
 分析結果預設寫到 `output/<檔名>-analysis.json`，用 `--out` 可自訂路徑。
+未在命令列指定的參數（模型、字數、平行數……）一律回落到 `blogseo.json`。
 
 
 | 選項                     | 預設                        | 說明                     |
 | ---------------------- | ------------------------- | ---------------------- |
-| `--models` / `-m`      | `hf`                      | 逗號分隔的模型別名，支援 `別名:模型id` |
+| `--models` / `-m`      | `blogseo.json` 的 text／image | 逗號分隔的模型別名，支援 `別名:模型id` |
 | `--out` / `-o`         | `output/`                 | 輸出 JSON 的路徑或目錄         |
 | `--fields` / `-f`      | `keywords,summary,images` | 要產生哪些項目，逗號分隔           |
-| `--max-images`         | 不限                        | 最多分析幾張圖，用來控制花費         |
-| `--alt-lang`           | `auto`                    | alt 文字語言，`auto` 跟隨文章語言 |
-| `--alt-max`            | `30`                      | alt 字元上限               |
-| `--summaries`          | `3`                       | 每個模型產生幾個不同角度的摘要版本（1–5） |
-| `--summary-min`        | `60`                      | 摘要字元下限                 |
-| `--summary-max`        | `150`                     | 摘要字元上限                 |
-| `--concurrency` / `-c` | `4`                       | 平行呼叫上限                 |
-| `--timeout`            | `90`                      | 單次請求逾時秒數               |
-| `--twd-rate`           | `31.8`                    | 費用換算成新台幣的匯率            |
+| `--max-images`         | 讀設定檔                      | 最多分析幾張圖，用來控制花費         |
+| `--alt-lang`           | 讀設定檔                      | alt 文字語言，`auto` 跟隨文章語言 |
+| `--alt-max`            | 讀設定檔                      | alt 字元上限               |
+| `--summaries`          | 讀設定檔                      | 每個模型產生幾個不同角度的摘要版本（1–5） |
+| `--summary-min`        | 讀設定檔                      | 摘要字元下限                 |
+| `--summary-max`        | 讀設定檔                      | 摘要字元上限                 |
+| `--concurrency` / `-c` | 讀設定檔                      | 平行呼叫上限                 |
+| `--timeout`            | 讀設定檔                      | 單次請求逾時秒數               |
+| `--twd-rate`           | 讀設定檔                      | 費用換算成新台幣的匯率            |
 
 
 
@@ -107,14 +207,15 @@ uv run blog-seo-ai providers
 
 ```bash
 # 互動式挑選，結果寫到 output/post-selection.json
-uv run blog-seo-ai review output/post-analysis.json
+blog-seo-ai review output/post-analysis.json
 
 # 非互動：整份採用 claude 的結果，摘要取第 2 則
-uv run blog-seo-ai review output/post-analysis.json --pick claude --summary-index 2 --yes
+blog-seo-ai review output/post-analysis.json --pick claude --summary-index 2 --yes
 ```
 
 `review` 只讀寫本地 JSON，不呼叫任何模型，所以不會產生費用，挑到滿意為止都可以重跑。
 每一項都可以選某個模型的建議、自己手動輸入，或是不採用。
+沒有被這次分析要求的項目（例如 `--fields keywords`）不會再問。
 `--pick` 在互動模式下只是把該模型設成預設選項，加上 `--yes` 才會完全不詢問。
 
 圖片的**檔名與 alt 是分開問的**，因為兩者的品質彼此無關：檔名取得漂亮的模型，
@@ -137,19 +238,19 @@ alt 可能寫得又臭又長。你可以拿 A 模型的檔名配 B 模型的 alt
 
 ```bash
 # 先預覽，不寫入
-uv run blog-seo-ai apply output/post-selection.json --dry-run
+blog-seo-ai apply output/post-selection.json --dry-run
 
 # 確認後寫入；加 --yes 可跳過詢問
-uv run blog-seo-ai apply output/post-selection.json --yes
+blog-seo-ai apply output/post-selection.json --yes
 ```
 
-這是唯一會修改原始檔案的指令。它只讀選擇檔與當下的 Markdown，不呼叫模型，
-也**不會改 front matter**（關鍵字與摘要留在選擇檔裡，要自己貼）。
+這是唯一會修改原始檔案的指令。它只讀選擇檔與當下的 Markdown，不呼叫模型。
 
-會做兩件事：
+會做這些事：
 
 1. 依字元位置改寫圖片語法的路徑與 alt（Markdown 與 HTML `<img>` 都支援），程式碼區塊裡的範例不會被改到。
 2. 把圖片檔改名，目錄不變。兩張圖對調檔名、或只改大小寫，都會先改成暫存名再改過去。
+3. 若 `blogseo.json` 的 `apply.write_front_matter` 為 true（預設），把挑選後的關鍵字與摘要寫進 YAML front matter。不想寫入時加 `--no-front-matter`。
 
 套用前會重新計算正文雜湊。文章在 analyze 之後被改過，預設會拒絕，避免改到錯誤的位置；`--force` 會改用當下重新解析的位置繼續。目標檔名已經被別的檔占用時也會中止，不會覆蓋。
 
@@ -159,22 +260,25 @@ uv run blog-seo-ai apply output/post-selection.json --yes
 | `--dry-run`    | 否   | 只顯示將要做的變更         |
 | `--yes` / `-y` | 否   | 不詢問，直接寫入          |
 | `--force`      | 否   | 文章被改過、或選擇檔沒有雜湊也繼續 |
-| `--backup`     | 否   | 寫入前把原文複製成 `.bak`  |
+| `--backup` / `--no-backup` | 讀設定檔 | 寫入前把原文複製成 `.bak` |
+| `--front-matter` / `--no-front-matter` | 讀設定檔 | 是否寫入關鍵字／摘要 |
 
 
 
 
 ## 控制 analyze 的產出項目
 
-`--fields` 決定這次要花錢做哪些事，可用 `keywords`、`summary`、`images` 三種：
+`--fields` 決定這次要花錢做哪些事，可用 `keywords`、`summary`、`images` 三種。
+互動選單的 1–5 就是這三種的組合。
 
 
-| 想要的結果         | 指令                          |
-| ------------- | --------------------------- |
-| 只要關鍵字         | `--fields keywords`         |
-| 只要摘要          | `--fields summary`          |
-| 關鍵字 + 摘要，不碰圖片 | `--fields keywords,summary` |
-| 只分析圖片         | `--fields images`           |
+| 想要的結果         | 指令 / 選單                          |
+| ------------- | ------------------------------- |
+| 只要關鍵字         | 選單 3，或 `--fields keywords`         |
+| 只要摘要          | 選單 2，或 `--fields summary`          |
+| 關鍵字 + 摘要，不碰圖片 | 選單 4，或 `--fields keywords,summary` |
+| 只分析圖片         | 選單 5，或 `--fields images`           |
+| 全部            | 選單 1                             |
 
 
 沒被要求的項目不會送進 prompt，也不會出現在給模型的 JSON schema 裡，所以不只是
@@ -198,7 +302,7 @@ claude  claude-sonnet-5     3     0        6,542          407    0.5455
 單價寫在各 provider 的 `pricing` 類別屬性（Claude 的在 `llm/anthropic.py`），
 官方調價時要手動更新；不在價目表中的模型會顯示「—」而不是猜一個數字。
 Hugging Face 走帳號免費額度，費用欄就是「—」。
-匯率預設 31.8，要精確計算就用 `--twd-rate` 帶入當日匯率。
+匯率預設 31.8，要精確計算就改 `blogseo.json` 的 `cost.usd_to_twd_rate`，或用 `--twd-rate`。
 
 ## Hugging Face 免費模型
 
@@ -231,11 +335,11 @@ Claude 按 token 計費；若只是想先把 SEO 流程跑通，可以用 Hub �
 計算。終端機表格會列出每則的實際字數，超出範圍的會標成黃色；JSON 裡則有
 `summary_lengths` 與 `metadata.summary_max_chars` 可以對照。
 
-要調整就用 `--summaries`、`--summary-min`、`--summary-max`：
+要調整就改 `blogseo.json` 的 `summary`，或用 `--summaries`、`--summary-min`、`--summary-max`：
 
 ```bash
 # 只要一則、限制在 80 到 120 字元
-uv run blog-seo-ai analyze post.md --summaries 1 --summary-min 80 --summary-max 120
+blog-seo-ai analyze post.md --summaries 1 --summary-min 80 --summary-max 120
 ```
 
 字數是靠 prompt 約束的，模型不見得每次都精準命中，所以工具會如實回報實際字數
@@ -251,13 +355,12 @@ alt 預設上限 30 個字元，同樣以 Python `len()` 計算。螢幕閱讀�
 
 ```bash
 # 這張圖的資訊量比較大，放寬到 60 字
-uv run blog-seo-ai analyze post.md --alt-max 60
+blog-seo-ai analyze post.md --alt-max 60
 ```
 
 > Claude 這邊刻意把 thinking effort 設成 `low`（見 `llm/anthropic.py` 的
 > `_THINKING_EFFORT`）。實測開啟預設的深度思考會多花三千多個 output token、
 > 單次呼叫從 7 秒拉長到 30 秒，但關鍵字與摘要品質沒有差異。
-
 
 
 ## 圖片路徑的處理範圍
@@ -300,7 +403,10 @@ analysis JSON 頂層包含 `article_info`、`keyword_summary`、`images`、`meta
 
 ## 開發
 
+開發這個 repo 才需要 [uv](https://docs.astral.sh/uv/)。使用者安裝與執行都不用它。
+
 ```bash
+uv sync
 uv run pytest
 ```
 
@@ -310,9 +416,13 @@ uv run pytest
 ## 專案結構
 
 ```
+blogseo.json            # 所有可調預設值（可直接改，不必開 CLI）
 src/blogseo/
 ├── cli.py              # typer 進入點
-├── config.py           # 金鑰與常數的唯一入口
+├── pipeline.py         # 互動選單與一次跑完的流程
+├── display.py          # 終端機表格
+├── settings.py         # 讀寫 blogseo.json
+├── config.py           # 金鑰與內建常數（JSON 缺漏時的後備）
 ├── errors.py           # 自訂例外
 ├── llm/                # provider 抽象層與各家實作
 │   ├── base.py         # BaseProvider 介面
@@ -322,7 +432,7 @@ src/blogseo/
 │   └── huggingface.py  # Hugging Face（文字 Qwen3-4B、圖片 GLM-4.6V-Flash）
 ├── markdown/
 │   ├── parser.py       # front matter、圖片擷取、位置記錄
-│   └── updater.py      # 改寫圖片語法，front matter 原樣接回
+│   └── updater.py      # 改寫圖片語法與 front matter
 ├── image/
 │   ├── analyzer.py     # 讀圖、縮圖、格式轉換
 │   └── renamer.py      # 檔名正規化與兩階段改名
@@ -334,4 +444,3 @@ src/blogseo/
     ├── selector.py     # 候選列舉、衝突偵測（純函式，不碰網路）
     └── applier.py      # 讀選擇檔、組計畫、寫回檔案
 ```
-

@@ -22,6 +22,10 @@ from pydantic import (
 )
 
 from blogseo.config import KEYWORD_COUNT
+
+#: Pydantic 清理關鍵字時的上限。實際要幾個由設定／prompt 決定，
+#: provider 會再裁到 ``keyword_count``。這裡留寬一點以免設定被 schema 先砍掉。
+MAX_KEYWORDS: Final[int] = 20
 from blogseo.image.renamer import slugify
 
 #: 輸出 JSON 的結構版本。欄位有不相容變動時才進位。
@@ -53,14 +57,14 @@ def _clean_keyword_list(value: list[str]) -> list[str]:
         value: 模型回傳的關鍵字。
 
     Returns:
-        清理後的關鍵字，最多 :data:`~blogseo.config.KEYWORD_COUNT` 個。
+        清理後的關鍵字，最多 :data:`MAX_KEYWORDS` 個。
     """
     seen: dict[str, None] = {}
     for item in value:
         cleaned = item.strip().strip("#\"'")
         if cleaned and cleaned.casefold() not in {k.casefold() for k in seen}:
             seen[cleaned] = None
-    return list(seen)[:KEYWORD_COUNT]
+    return list(seen)[:MAX_KEYWORDS]
 
 
 def _clean_summary_list(value: list[str]) -> list[str]:

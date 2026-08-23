@@ -157,6 +157,7 @@ class AnthropicProvider(BaseProvider):
                 self.language,
                 include_keywords=AnalysisField.KEYWORDS in self.fields,
                 include_summaries=AnalysisField.SUMMARY in self.fields,
+                keyword_count=self.keyword_count,
                 summary_count=self.summary_count,
                 summary_min_chars=self.summary_min_chars,
                 summary_max_chars=self.summary_max_chars,
@@ -165,7 +166,7 @@ class AnthropicProvider(BaseProvider):
             output_format=text_output_schema(self.fields),
             max_tokens=self._TEXT_MAX_TOKENS,
         )
-        return self._limit_summaries(KeywordSummaryResult.from_payload(payload))
+        return self._limit_text_result(KeywordSummaryResult.from_payload(payload))
 
     def analyze_image(
         self,

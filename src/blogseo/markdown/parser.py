@@ -5,8 +5,8 @@
 * 圖片引用會連同**在正文中的字元位置**一起記錄，apply 階段才能做精準替換，
   不會像全域字串取代那樣誤傷同名文字或互為前綴的檔名。
 * 程式碼區塊（圍籬與行內）內的圖片語法會被忽略，避免教學文章裡的範例被改到。
-* 位置皆相對於「去掉 front matter 之後的正文」，回寫時把新正文接回原檔，
-  既有的 front matter 原樣保留。
+* 位置皆相對於「去掉 front matter 之後的正文」，回寫時把新正文接回原檔。
+  關鍵字與摘要可另外寫進 front matter，由設定 ``apply.write_front_matter`` 控制。
 """
 
 from __future__ import annotations
@@ -130,8 +130,8 @@ class ParsedArticle:
 def compute_content_hash(content: str) -> str:
     """計算正文的 sha256。
 
-    只涵蓋去掉 front matter 之後的正文，因為 apply 只改正文裡的圖片語法，
-    不改 front matter。
+    只涵蓋去掉 front matter 之後的正文，因為圖片替換只改正文裡的語法。
+    關鍵字與摘要若要寫進 front matter，由 apply 另外處理。
 
     Args:
         content: 去掉 front matter 之後的正文。

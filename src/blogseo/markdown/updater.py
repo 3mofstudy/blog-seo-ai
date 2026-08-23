@@ -1,4 +1,4 @@
-"""把選擇結果寫回 Markdown：改圖片語法，保留原有的 front matter 不動。
+"""把選擇結果寫回 Markdown：改圖片語法，並可把關鍵字／摘要寫進 front matter。
 
 圖片引用依字元位置替換，不用全域字串取代，避免誤傷同名路徑或教學範例。
 位置來自重新解析當下的文章，因此 apply 前必須先確認正文雜湊仍一致。
@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
+
+import frontmatter
 
 from blogseo.errors import ApplyError
 from blogseo.markdown.parser import _MARKDOWN_IMAGE, _strip_path_decorations
@@ -198,3 +201,42 @@ def splice_body(original_text: str, original_body: str, new_body: str) -> str:
     prefix = original_text[:index]
     suffix = original_text[index + len(original_body) :]
     return prefix + new_body + suffix
+
+
+def rewrite_front_matter(
+    original_text: str,
+    *,
+    keywords: list[str] | None = None,
+    summary: str | None = None,
+    keywords_key: str = "keywords",
+    summary_key: str = "description",
+) -> str:
+    """把關鍵字與摘要寫進 YAML front matter，其他欄位保留。
+
+    沒有 front matter 時會新建一塊。關鍵字為空清單、摘要為空字串時，
+    該項不會寫入，避免用空值蓋掉原文。
+
+    Args:
+        original_text: 完整檔案內容（可含已改過的圖片語法）。
+        keywords: 要寫入的關鍵字；空或 ``None`` 表示不改這個欄位。
+        summary: 要寫入的摘要（meta description）；空或 ``None`` 表示不改。
+        keywords_key: front matter 裡關鍵字的欄位名。
+        summary_key: front matter 裡摘要的欄位名。
+
+    Returns:
+        更新後的完整檔案內容。
+    """
+    updates: dict[str, Any] = {}
+    if keywords:
+        updates[keywords_key] = list(keywords)
+    if summary:
+        updates[summary_key] = summary
+    if not updates:
+        return original_text
+
+    post = frontmatter.loads(original_text)
+    post.metadata.update(updates)
+    dumped = frontmatter.dumps(post)
+    if not dumped.endswith("\n"):
+        dumped += "\n"
+    return dumped
