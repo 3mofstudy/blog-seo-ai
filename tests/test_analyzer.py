@@ -440,19 +440,27 @@ def test_registry_parses_huggingface_alias() -> None:
 
 def test_model_presets_one_row_per_implemented_provider_with_model_id() -> None:
     from blogseo.llm.huggingface import HuggingFaceProvider
+    from blogseo.llm.openai import OpenAIProvider
     from blogseo.llm.registry import list_model_presets
 
     text = list_model_presets("text")
     image = list_model_presets("image")
-    assert [preset.alias for preset in text] == ["claude", "hf"]
-    assert [preset.alias for preset in image] == ["claude", "hf"]
-    assert {preset.provider_key for preset in text} == {"anthropic", "huggingface"}
+    assert [preset.alias for preset in text] == ["claude", "hf", "gpt"]
+    assert [preset.alias for preset in image] == ["claude", "hf", "gpt"]
+    assert {preset.provider_key for preset in text} == {
+        "anthropic",
+        "huggingface",
+        "openai",
+    }
     hf_text = next(preset for preset in text if preset.alias == "hf")
     hf_image = next(preset for preset in image if preset.alias == "hf")
+    gpt = next(preset for preset in text if preset.alias == "gpt")
     assert hf_text.model_id == HuggingFaceProvider.default_model
     assert hf_image.model_id == HuggingFaceProvider.default_image_model
+    assert gpt.model_id == OpenAIProvider.default_model
     assert hf_text.token == f"hf:{HuggingFaceProvider.default_model}"
     assert hf_image.token == f"hf:{HuggingFaceProvider.default_image_model}"
+    assert gpt.token == f"gpt:{OpenAIProvider.default_model}"
 
 
 def test_format_model_token_fills_in_default_model_id() -> None:
@@ -465,6 +473,7 @@ def test_format_model_token_fills_in_default_model_id() -> None:
     )
     assert "claude-sonnet-5" in format_model_token("claude", role="text")
     assert "claude-opus-5" in format_model_token("claude:claude-opus-5", role="text")
+    assert "gpt-5.6-terra" in format_model_token("gpt", role="text")
 
 
 def test_suggested_model_id_keeps_current_when_same_provider() -> None:
@@ -497,7 +506,7 @@ def test_normalize_typed_model_id_accepts_plain_or_prefixed() -> None:
 
 def test_registry_reports_unimplemented_provider() -> None:
     with pytest.raises(ConfigError, match="尚未完成"):
-        create_provider("gpt")
+        create_provider("gemini")
 
 
 def test_parse_model_tokens_dedupes_and_requires_value() -> None:

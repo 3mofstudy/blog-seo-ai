@@ -13,14 +13,14 @@
 | 階段    | 指令                         | 狀態                                   |
 | ----- | -------------------------- | ------------------------------------ |
 | 一次跑完  | `blog-seo-ai post.md` | 可用（互動選單）                             |
-| 分析    | `analyze`                  | 可用（預設 Hugging Face 免費模型；也可指定 Claude） |
+| 分析    | `analyze`                  | 可用（預設 Hugging Face 免費模型；也可指定 Claude / OpenAI） |
 | 挑選    | `review`                   | 可用                                   |
 | 套用    | `apply`                    | 可用                                   |
 | 預設值   | `blogseo.json`             | 可用（也可在選單「其他設定」裡改）                    |
 
 
-Provider 方面，Anthropic（Claude）與 Hugging Face（文字 Qwen3-4B、圖片 GLM-4.6V-Flash）已完成；
-OpenAI 與 Gemini 已在註冊表預留位置，尚未實作。
+Provider 方面，Anthropic（Claude）、OpenAI（預設 gpt-5.6-terra）與 Hugging Face（文字 Qwen3-4B、圖片 GLM-4.6V-Flash）已完成；
+Gemini 已在註冊表預留位置，尚未實作。
 
 ## 安裝
 
@@ -64,7 +64,7 @@ python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
 
 也可以自行擇一：
 
-1. 系統環境變數 `HF_TOKEN`、`ANTHROPIC_API_KEY`
+1. 系統環境變數 `HF_TOKEN`、`ANTHROPIC_API_KEY`、`OPENAI_API_KEY`
 2. 使用者設定目錄的 `.env`
    - Windows：`%APPDATA%\blogseo\.env`
    - macOS / Linux：`~/.config/blogseo/.env`
@@ -78,6 +78,8 @@ HF_TOKEN=hf_...
 CLAUDE_API_KEY=sk-ant-...
 # 或使用 SDK 預設名稱
 # ANTHROPIC_API_KEY=sk-ant-...
+
+OPENAI_API_KEY=sk-...
 ```
 
 `.env` 不要提交進版控。
@@ -166,6 +168,10 @@ blog-seo-ai analyze post.md --models hf:Qwen/Qwen3-8B
 
 # 改走 Claude（會計費）
 blog-seo-ai analyze post.md --models claude
+
+# 改走 OpenAI（會計費；預設 gpt-5.6-terra）
+blog-seo-ai analyze post.md --models gpt
+blog-seo-ai analyze post.md --models gpt:gpt-5.6-sol
 
 # 只要其中幾樣：關鍵字、摘要、圖片可自由組合
 blog-seo-ai analyze post.md --fields keywords
@@ -299,7 +305,7 @@ claude  claude-sonnet-5     3     0        6,542          407    0.5455
 整體耗時 12.4 秒　合計 NT$ 0.5455（US$ 0.0172，匯率 31.8）
 ```
 
-單價寫在各 provider 的 `pricing` 類別屬性（Claude 的在 `llm/anthropic.py`），
+單價寫在各 provider 的 `pricing` 類別屬性（Claude 的在 `llm/anthropic.py`，OpenAI 的在 `llm/openai.py`），
 官方調價時要手動更新；不在價目表中的模型會顯示「—」而不是猜一個數字。
 Hugging Face 走帳號免費額度，費用欄就是「—」。
 匯率預設 31.8，要精確計算就改 `blogseo.json` 的 `cost.usd_to_twd_rate`，或用 `--twd-rate`。
@@ -360,7 +366,8 @@ blog-seo-ai analyze post.md --alt-max 60
 
 > Claude 這邊刻意把 thinking effort 設成 `low`（見 `llm/anthropic.py` 的
 > `_THINKING_EFFORT`）。實測開啟預設的深度思考會多花三千多個 output token、
-> 單次呼叫從 7 秒拉長到 30 秒，但關鍵字與摘要品質沒有差異。
+> 單次呼叫從 7 秒拉長到 30 秒，但關鍵字與摘要品質沒有差異。OpenAI GPT-5.6
+> 同樣把 `reasoning.effort` 設成 `low`（見 `llm/openai.py`）。
 
 
 ## 圖片路徑的處理範圍
@@ -429,6 +436,7 @@ src/blogseo/
 │   ├── registry.py     # 別名 → provider 對應
 │   ├── prompts.py      # 各家共用的 prompt
 │   ├── anthropic.py    # Claude 實作
+│   ├── openai.py       # OpenAI（預設 gpt-5.6-terra）
 │   └── huggingface.py  # Hugging Face（文字 Qwen3-4B、圖片 GLM-4.6V-Flash）
 ├── markdown/
 │   ├── parser.py       # front matter、圖片擷取、位置記錄

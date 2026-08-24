@@ -374,8 +374,8 @@ def list_providers() -> None:
     console.print(table)
     console.print(
         "[dim]上列是各供應商的內建預設型號，設定選單可改成同一家的其他型號。"
-        "hf、huggingface、qwen 都是 Hugging Face；claude、anthropic 都是 Claude。"
-        "尚未實作的 OpenAI / Gemini 不會出現在選單。[/dim]"
+        "hf、huggingface、qwen 都是 Hugging Face；claude、anthropic 都是 Claude；"
+        "gpt、openai 都是 OpenAI。尚未實作的 Gemini 不會出現在選單。[/dim]"
     )
 
 
