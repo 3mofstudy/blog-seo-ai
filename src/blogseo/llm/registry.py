@@ -128,7 +128,6 @@ def list_model_presets(role: ModelRole) -> list[ModelPreset]:
     """列出已實作 provider 的預設型號，每個供應商一筆。
 
     設定選單用這個清單，而不是把 hf、huggingface、qwen 等別名全列出來。
-    Gemini 尚未實作，不會出現。
     """
     presets: list[ModelPreset] = []
     for spec in _SPECS:

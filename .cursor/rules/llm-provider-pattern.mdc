@@ -19,4 +19,4 @@ alwaysApply: false
    這樣模型之間的輸出差異才反映能力差異而非 prompt 差異
 6. 所有 SDK 例外都要轉成 ProviderError；呼叫成功與失敗都要更新 `self.usage`
 7. 結構化輸出優先使用各家原生機制（Anthropic 的 messages.parse、
-   OpenAI 的 structured output、Gemini 的 response schema），不要自己 parse JSON
+   OpenAI 的 structured output、Gemini 的 response_schema），不要自己 parse JSON

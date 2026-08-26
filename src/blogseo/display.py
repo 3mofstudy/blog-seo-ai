@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import typer
+
 from blogseo.markdown.parser import ParsedArticle
 from blogseo.schemas.result import AnalysisField, AnalysisResult
 from blogseo.schemas.selection import SelectionImage
@@ -16,6 +18,16 @@ from rich.table import Table
 
 console = Console()
 error_console = Console(stderr=True)
+
+
+def ask_choice(maximum: int, *, default: int, allow_zero: bool = False) -> int:
+    """要求使用者輸入一個編號。``allow_zero`` 時 0 代表返回或結束。"""
+    lowest = 0 if allow_zero else 1
+    while True:
+        value = typer.prompt("請選擇編號", default=default, type=int)
+        if lowest <= value <= maximum:
+            return value
+        error_console.print(f"[red]請輸入 {lowest} 到 {maximum} 之間的數字。[/red]")
 
 
 def format_length(length: int, limit: int) -> str:

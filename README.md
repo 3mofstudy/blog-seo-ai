@@ -13,14 +13,13 @@
 | 階段    | 指令                         | 狀態                                   |
 | ----- | -------------------------- | ------------------------------------ |
 | 一次跑完  | `blog-seo-ai post.md` | 可用（互動選單）                             |
-| 分析    | `analyze`                  | 可用（預設 Hugging Face 免費模型；也可指定 Claude / OpenAI） |
+| 分析    | `analyze`                  | 可用（預設 Hugging Face 免費模型；也可指定 Claude / OpenAI / Gemini） |
 | 挑選    | `review`                   | 可用                                   |
 | 套用    | `apply`                    | 可用                                   |
 | 預設值   | `blogseo.json`             | 可用（也可在選單「其他設定」裡改）                    |
 
 
-Provider 方面，Anthropic（Claude）、OpenAI（預設 gpt-5.6-terra）與 Hugging Face（文字 Qwen3-4B、圖片 GLM-4.6V-Flash）已完成；
-Gemini 已在註冊表預留位置，尚未實作。
+Provider 方面，Anthropic（Claude）、OpenAI（預設 gpt-5.6-terra）、Gemini（預設 gemini-3.5-flash）與 Hugging Face（文字 Qwen3-4B、圖片 GLM-4.6V-Flash）已完成。
 
 ## 安裝
 
@@ -64,7 +63,7 @@ python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
 
 也可以自行擇一：
 
-1. 系統環境變數 `HF_TOKEN`、`ANTHROPIC_API_KEY`、`OPENAI_API_KEY`
+1. 系統環境變數 `HF_TOKEN`、`ANTHROPIC_API_KEY`、`OPENAI_API_KEY`、`GEMINI_API_KEY`
 2. 使用者設定目錄的 `.env`
    - Windows：`%APPDATA%\blogseo\.env`
    - macOS / Linux：`~/.config/blogseo/.env`
@@ -80,6 +79,10 @@ CLAUDE_API_KEY=sk-ant-...
 # ANTHROPIC_API_KEY=sk-ant-...
 
 OPENAI_API_KEY=sk-...
+
+GEMINI_API_KEY=...
+# 或使用 Google 通用名稱
+# GOOGLE_API_KEY=...
 ```
 
 `.env` 不要提交進版控。

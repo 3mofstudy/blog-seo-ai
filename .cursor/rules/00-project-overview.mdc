@@ -7,7 +7,7 @@ alwaysApply: true
 # blogseo-cli 專案脈絡
 
 本專案是本地 CLI 工具：讀取部落格文章 (.md) 與相關圖片，
-呼叫多家 LLM (Claude / OpenAI / Gemini) 分析：
+呼叫多家 LLM (Claude / OpenAI / Gemini / Hugging Face) 分析：
 - 產生 5 個 SEO 關鍵字 + 文章摘要
 - 理解圖片內容，建議 SEO 友善檔名 + alt 文字
 - 分三階段：`analyze`（只產生 JSON，不動檔案）、`review`（從並列結果挑選）、
@@ -16,7 +16,7 @@ alwaysApply: true
 ## 技術堆疊
 - Python + uv 管理開發環境（使用者安裝用 pipx / pip，不必裝 uv）
 - CLI 框架：typer
-- 各 LLM 官方 SDK：anthropic, openai, google-genai
+- 各 LLM 官方 SDK：anthropic, openai, google-genai, huggingface-hub
 - 輸出：rich 做表格顯示；結構化結果一律先落地成 JSON
 
 ## 硬性原則

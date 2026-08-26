@@ -191,13 +191,13 @@ def _sample_presets() -> list:
 
 
 def test_prompt_model_token_zero_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    from blogseo.pipeline import _prompt_model_token
+    from blogseo.settings_ui import _prompt_model_token
 
     monkeypatch.setattr(
-        "blogseo.pipeline.list_model_presets", lambda role: _sample_presets()
+        "blogseo.settings_ui.list_model_presets", lambda role: _sample_presets()
     )
     monkeypatch.setattr(
-        "blogseo.pipeline._ask_menu_choice", lambda *args, **kwargs: 0
+        "blogseo.settings_ui.ask_choice", lambda *args, **kwargs: 0
     )
     assert _prompt_model_token("預設關鍵字／摘要模型", "hf", role="text") is None
 
@@ -205,16 +205,16 @@ def test_prompt_model_token_zero_returns_none(monkeypatch: pytest.MonkeyPatch) -
 def test_prompt_model_token_provider_then_typed_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from blogseo.pipeline import _prompt_model_token
+    from blogseo.settings_ui import _prompt_model_token
 
     monkeypatch.setattr(
-        "blogseo.pipeline.list_model_presets", lambda role: _sample_presets()
+        "blogseo.settings_ui.list_model_presets", lambda role: _sample_presets()
     )
     monkeypatch.setattr(
-        "blogseo.pipeline._ask_menu_choice", lambda *args, **kwargs: 2
+        "blogseo.settings_ui.ask_choice", lambda *args, **kwargs: 2
     )
     monkeypatch.setattr(
-        "blogseo.pipeline.typer.prompt",
+        "blogseo.settings_ui.typer.prompt",
         lambda *args, **kwargs: "claude-opus-5",
     )
     assert (
@@ -226,16 +226,16 @@ def test_prompt_model_token_provider_then_typed_id(
 def test_prompt_model_token_keeps_current_id_on_enter(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from blogseo.pipeline import _prompt_model_token
+    from blogseo.settings_ui import _prompt_model_token
 
     monkeypatch.setattr(
-        "blogseo.pipeline.list_model_presets", lambda role: _sample_presets()
+        "blogseo.settings_ui.list_model_presets", lambda role: _sample_presets()
     )
     monkeypatch.setattr(
-        "blogseo.pipeline._ask_menu_choice", lambda *args, **kwargs: 1
+        "blogseo.settings_ui.ask_choice", lambda *args, **kwargs: 1
     )
     monkeypatch.setattr(
-        "blogseo.pipeline.typer.prompt",
+        "blogseo.settings_ui.typer.prompt",
         lambda *args, **kwargs: kwargs["default"],
     )
     assert (
@@ -249,15 +249,15 @@ def test_prompt_model_token_keeps_current_id_on_enter(
 def test_prompt_model_token_zero_on_model_id_then_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from blogseo.pipeline import _prompt_model_token
+    from blogseo.settings_ui import _prompt_model_token
 
     menu_choices = iter([1, 0])
     monkeypatch.setattr(
-        "blogseo.pipeline.list_model_presets", lambda role: _sample_presets()
+        "blogseo.settings_ui.list_model_presets", lambda role: _sample_presets()
     )
     monkeypatch.setattr(
-        "blogseo.pipeline._ask_menu_choice",
+        "blogseo.settings_ui.ask_choice",
         lambda *args, **kwargs: next(menu_choices),
     )
-    monkeypatch.setattr("blogseo.pipeline.typer.prompt", lambda *args, **kwargs: "0")
+    monkeypatch.setattr("blogseo.settings_ui.typer.prompt", lambda *args, **kwargs: "0")
     assert _prompt_model_token("預設關鍵字／摘要模型", "hf", role="text") is None

@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Any, Final
+from typing import Annotated, Final
 
 from pydantic import (
     AfterValidator,
@@ -388,30 +388,3 @@ class AnalysisResult(BaseModel):
             以兩空格縮排、保留非 ASCII 字元的 JSON 字串，結尾帶換行。
         """
         return self.model_dump_json(indent=2) + "\n"
-
-    def summary_rows(self) -> list[dict[str, Any]]:
-        """整理成適合終端機表格顯示的資料。
-
-        Returns:
-            每個模型一列，含關鍵字、各摘要版本與失敗計數。
-        """
-        rows: list[dict[str, Any]] = []
-        for alias, entry in self.keyword_summary.items():
-            failed = sum(
-                1
-                for image in self.images.values()
-                if image.models.get(alias) is not None
-                and image.models[alias].error is not None
-            )
-            rows.append(
-                {
-                    "alias": alias,
-                    "model_id": entry.model_id,
-                    "keywords": entry.result.keywords if entry.result else [],
-                    "summaries": entry.result.summaries if entry.result else [],
-                    "summary_lengths": entry.summary_lengths,
-                    "error": entry.error,
-                    "failed_images": failed,
-                }
-            )
-        return rows

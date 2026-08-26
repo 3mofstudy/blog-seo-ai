@@ -23,13 +23,13 @@ from blogseo.pipeline import (
     run_apply_session,
     run_interactive,
     run_review_session,
-    run_settings_menu,
 )
 from blogseo.schemas.result import AnalysisField
 from blogseo.seo.analyzer import AnalyzeOptions, options_from_settings, parse_fields
 from blogseo.seo.applier import load_selection
 from blogseo.seo.selector import load_analysis
 from blogseo.settings import load_settings
+from blogseo.settings_ui import run_settings_menu
 
 _SUBCOMMANDS = frozenset({"analyze", "review", "apply", "providers", "run", "settings"})
 
@@ -177,51 +177,30 @@ def analyze(
     try:
         settings = load_settings()
         selected_fields = parse_fields(fields)
+        options = options_from_settings(settings, fields=selected_fields)
         if models is not None:
             tokens = parse_model_tokens(models)
-            options = AnalyzeOptions(
-                model_tokens=tokens,
-                fields=selected_fields,
-                alt_language=alt_lang if alt_lang is not None else settings.alt.language,
-                keyword_count=settings.keywords.count,
-                summary_count=summaries if summaries is not None else settings.summary.count,
-                summary_min_chars=(
-                    summary_min if summary_min is not None else settings.summary.min_chars
-                ),
-                summary_max_chars=(
-                    summary_max if summary_max is not None else settings.summary.max_chars
-                ),
-                alt_max_chars=alt_max if alt_max is not None else settings.alt.max_chars,
-                max_images=max_images if max_images is not None else settings.analyze.max_images,
-                concurrency=(
-                    concurrency if concurrency is not None else settings.analyze.concurrency
-                ),
-                context_radius=settings.analyze.context_radius,
-                timeout=timeout if timeout is not None else settings.analyze.timeout_seconds,
-                usd_to_twd_rate=(
-                    twd_rate if twd_rate is not None else settings.cost.usd_to_twd_rate
-                ),
-            )
-        else:
-            options = options_from_settings(settings, fields=selected_fields)
-            if alt_lang is not None:
-                options.alt_language = alt_lang
-            if summaries is not None:
-                options.summary_count = summaries
-            if summary_min is not None:
-                options.summary_min_chars = summary_min
-            if summary_max is not None:
-                options.summary_max_chars = summary_max
-            if alt_max is not None:
-                options.alt_max_chars = alt_max
-            if max_images is not None:
-                options.max_images = max_images
-            if concurrency is not None:
-                options.concurrency = concurrency
-            if timeout is not None:
-                options.timeout = timeout
-            if twd_rate is not None:
-                options.usd_to_twd_rate = twd_rate
+            options.model_tokens = tokens
+            options.text_tokens = None
+            options.image_tokens = None
+        if alt_lang is not None:
+            options.alt_language = alt_lang
+        if summaries is not None:
+            options.summary_count = summaries
+        if summary_min is not None:
+            options.summary_min_chars = summary_min
+        if summary_max is not None:
+            options.summary_max_chars = summary_max
+        if alt_max is not None:
+            options.alt_max_chars = alt_max
+        if max_images is not None:
+            options.max_images = max_images
+        if concurrency is not None:
+            options.concurrency = concurrency
+        if timeout is not None:
+            options.timeout = timeout
+        if twd_rate is not None:
+            options.usd_to_twd_rate = twd_rate
 
         if options.summary_min_chars >= options.summary_max_chars:
             error_console.print(
@@ -375,7 +354,7 @@ def list_providers() -> None:
     console.print(
         "[dim]上列是各供應商的內建預設型號，設定選單可改成同一家的其他型號。"
         "hf、huggingface、qwen 都是 Hugging Face；claude、anthropic 都是 Claude；"
-        "gpt、openai 都是 OpenAI。尚未實作的 Gemini 不會出現在選單。[/dim]"
+        "gpt、openai 都是 OpenAI；gemini、google 都是 Gemini。[/dim]"
     )
 
 

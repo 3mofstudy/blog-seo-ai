@@ -57,40 +57,6 @@ class PreparedImage:
     resized: bool
 
 
-@dataclass(frozen=True)
-class ImageStats:
-    """不做解碼、只取得基本資訊時的結果。"""
-
-    width: int
-    height: int
-    size_bytes: int
-
-
-def probe_image(path: Path) -> ImageStats:
-    """讀取圖片的尺寸與檔案大小，不做完整解碼。
-
-    Args:
-        path: 圖片路徑。
-
-    Returns:
-        基本資訊。
-
-    Raises:
-        ImageNotFoundError: 檔案不存在。
-        ImageProcessingError: 檔案無法辨識為圖片。
-    """
-    if not path.is_file():
-        raise ImageNotFoundError(f"找不到圖片：{path}")
-    try:
-        with Image.open(path) as image:
-            width, height = image.size
-    except UnidentifiedImageError as exc:
-        raise ImageProcessingError(f"無法辨識的圖片格式：{path}") from exc
-    except OSError as exc:
-        raise ImageProcessingError(f"讀取圖片失敗 {path}：{exc}") from exc
-    return ImageStats(width=width, height=height, size_bytes=path.stat().st_size)
-
-
 def _flatten_for_jpeg(image: Image.Image) -> Image.Image:
     """把含透明度的圖片疊到白底上，以便存成 JPEG。
 

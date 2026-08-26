@@ -45,7 +45,7 @@ _README: Final[str] = (
     "可直接編輯此檔來調整預設值，不必開啟 CLI。"
     "未寫的欄位會用內建預設。"
     "也可在程式裡選「6. 其他設定」寫回這裡。"
-    "模型寫法與 --models 相同，例如 hf、claude、gpt、hf:Qwen/Qwen3-8B。"
+    "模型寫法與 --models 相同，例如 hf、claude、gpt、gemini、hf:Qwen/Qwen3-8B。"
 )
 
 

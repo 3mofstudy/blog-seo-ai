@@ -179,34 +179,16 @@ class BaseProvider(ABC):
             + self.usage.output_tokens * output_price
         ) / 1_000_000
 
-    def _limit_summaries(self, result: KeywordSummaryResult) -> KeywordSummaryResult:
-        """把摘要裁到要求的版本數。
-
-        模型偶爾會多給幾則，多的直接捨去；給不足時不補，讓結果如實呈現。
-
-        Args:
-            result: 模型回傳的原始結果。
-
-        Returns:
-            版本數不超過 :attr:`summary_count` 的結果。
-        """
-        if len(result.summaries) <= self.summary_count:
-            return result
-        return result.model_copy(
-            update={"summaries": result.summaries[: self.summary_count]}
-        )
-
-    def _limit_keywords(self, result: KeywordSummaryResult) -> KeywordSummaryResult:
-        """把關鍵字裁到要求的數量。"""
-        if len(result.keywords) <= self.keyword_count:
-            return result
-        return result.model_copy(
-            update={"keywords": result.keywords[: self.keyword_count]}
-        )
-
     def _limit_text_result(self, result: KeywordSummaryResult) -> KeywordSummaryResult:
-        """依本次設定裁切關鍵字與摘要數量。"""
-        return self._limit_summaries(self._limit_keywords(result))
+        """依本次設定裁切關鍵字與摘要數量。模型多給的直接捨去，不足時不補。"""
+        updates: dict[str, list[str]] = {}
+        if len(result.keywords) > self.keyword_count:
+            updates["keywords"] = result.keywords[: self.keyword_count]
+        if len(result.summaries) > self.summary_count:
+            updates["summaries"] = result.summaries[: self.summary_count]
+        if not updates:
+            return result
+        return result.model_copy(update=updates)
 
     @abstractmethod
     def analyze_text(self, content: str) -> KeywordSummaryResult:

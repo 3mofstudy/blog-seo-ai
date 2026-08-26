@@ -256,19 +256,3 @@ def _upsert_env_file(path: Path, name: str, value: str) -> None:
             output[-1] += "\n"
         output.append(assignment)
     path.write_text("".join(output), encoding="utf-8")
-
-
-def has_api_key(provider: str) -> bool:
-    """檢查某個 provider 的金鑰是否已設定。
-
-    Args:
-        provider: provider 名稱。
-
-    Returns:
-        金鑰存在時為 ``True``。
-    """
-    try:
-        get_api_key(provider)
-    except ConfigError:
-        return False
-    return True
