@@ -18,6 +18,7 @@ dependencies = [
     "huggingface-hub>=1.28.0",
     "openai>=3.3.1",
     "google-genai>=2.20.0",
+    "zhconv>=1.4.3",
 ]
 
 [project.urls]

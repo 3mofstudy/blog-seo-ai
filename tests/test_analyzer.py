@@ -35,11 +35,19 @@ class _StubProvider(BaseProvider):
         "gpt": (5.0, 25.0),
     }
 
-    def __init__(self, *, fail_text: bool = False, fail_image: bool = False, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *,
+        fail_text: bool = False,
+        fail_image: bool = False,
+        image_alt: str = "替代文字",
+        **kwargs: Any,
+    ) -> None:
         kwargs.setdefault("api_key", "stub-key")
         super().__init__(**kwargs)
         self._fail_text = fail_text
         self._fail_image = fail_image
+        self._image_alt = image_alt
 
     def analyze_text(self, content: str) -> KeywordSummaryResult:
         if self._fail_text:
@@ -69,7 +77,9 @@ class _StubProvider(BaseProvider):
             self.usage.record_failure(elapsed_ms=1)
             raise ProviderError(self.name, self.model, "圖片分析壞掉了")
         self.usage.record_success(input_tokens=500, output_tokens=30, elapsed_ms=1)
-        return ImageAnalysisResult(suggested_filename="Stub Chart Result", alt="替代文字")
+        return ImageAnalysisResult(
+            suggested_filename="Stub Chart Result", alt=self._image_alt
+        )
 
 
 def _make_article(tmp_path: Path, image_count: int = 2) -> Path:
@@ -114,6 +124,7 @@ def stub_factory(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         return _StubProvider(
             fail_text=setting.get("fail_text", False),
             fail_image=setting.get("fail_image", False),
+            image_alt=setting.get("image_alt", "替代文字"),
             model=token,
             **kwargs,
         )
@@ -353,6 +364,33 @@ def test_alt_language_follows_article_by_default(
     article = parse_article(_make_article(tmp_path))
     result = analyze_article(article, AnalyzeOptions(model_tokens=["claude"]))
     assert result.metadata.alt_language == article.language
+
+
+def test_simplified_alt_is_converted_to_traditional(
+    tmp_path: Path, stub_factory: dict[str, Any]
+) -> None:
+    stub_factory["claude"] = {"image_alt": "Python调用R的ggplot2生成折线图"}
+    article = parse_article(_make_article(tmp_path, image_count=1))
+    result = analyze_article(article, AnalyzeOptions(model_tokens=["claude"]))
+
+    analysis = next(iter(result.images.values())).models["claude"]
+    assert analysis.result is not None
+    assert analysis.result.alt == "Python調用R的ggplot2生成折線圖"
+    assert analysis.alt_length == len(analysis.result.alt)
+
+
+def test_english_alt_is_not_converted(
+    tmp_path: Path, stub_factory: dict[str, Any]
+) -> None:
+    stub_factory["claude"] = {"image_alt": "Python calling R ggplot2 line chart"}
+    article = parse_article(_make_article(tmp_path, image_count=1))
+    result = analyze_article(
+        article, AnalyzeOptions(model_tokens=["claude"], alt_language="en")
+    )
+
+    analysis = next(iter(result.images.values())).models["claude"]
+    assert analysis.result is not None
+    assert analysis.result.alt == "Python calling R ggplot2 line chart"
 
 
 def test_defaults_to_three_summaries(tmp_path: Path, stub_factory: dict[str, Any]) -> None:

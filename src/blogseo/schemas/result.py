@@ -51,17 +51,17 @@ DEFAULT_FIELDS: Final[frozenset[AnalysisField]] = frozenset(AnalysisField)
 
 
 def _clean_keyword_list(value: list[str]) -> list[str]:
-    """去除空白與重複關鍵字，並截斷到規定數量。
+    """去掉井字號、引號、內部空白與重複關鍵字，並截斷到規定數量。
 
     Args:
         value: 模型回傳的關鍵字。
 
     Returns:
-        清理後的關鍵字，最多 :data:`MAX_KEYWORDS` 個。
+        清理後的關鍵字，最多 :data:`MAX_KEYWORDS` 個。每個詞都是連貫的，不含空白。
     """
     seen: dict[str, None] = {}
     for item in value:
-        cleaned = item.strip().strip("#\"'")
+        cleaned = "".join(item.split()).strip("#\"'")
         if cleaned and cleaned.casefold() not in {k.casefold() for k in seen}:
             seen[cleaned] = None
     return list(seen)[:MAX_KEYWORDS]
@@ -91,7 +91,8 @@ SummaryList = Annotated[list[str], AfterValidator(_clean_summary_list)]
 
 _KEYWORDS_DESCRIPTION: Final[str] = (
     f"{KEYWORD_COUNT} 個 SEO 關鍵字，使用文章本身的語言，"
-    "依重要性排序，彼此不重複，不要加井字號或引號"
+    "依重要性排序，彼此不重複，不要加井字號或引號；"
+    "每個關鍵字必須連成一個詞，中間不能有空白"
 )
 _SUMMARIES_DESCRIPTION: Final[str] = (
     "多個不同切入角度的文章摘要，作為 meta description 使用。"

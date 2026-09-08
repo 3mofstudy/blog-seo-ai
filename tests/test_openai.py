@@ -73,7 +73,7 @@ def test_analyze_text_uses_responses_parse_and_schema() -> None:
     fake = _FakeResponses(_parsed(payload))
     result = _provider(fake).analyze_text("文章內容")
 
-    assert result.keywords[:2] == ["Azure NSG", "白名單"]
+    assert result.keywords[:2] == ["AzureNSG", "白名單"]
     assert result.summaries
     call = fake.calls[0]
     assert call["model"] == OpenAIProvider.default_model

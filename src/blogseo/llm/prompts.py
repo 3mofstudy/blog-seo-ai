@@ -15,6 +15,7 @@ from blogseo.config import (
     SUMMARY_MIN_CHARS,
     SUMMARY_VARIANT_COUNT,
 )
+from blogseo.zh import wants_traditional_chinese
 
 #: 送進模型的正文字元上限，避免超長文章造成不必要的花費。
 MAX_CONTENT_CHARS: Final[int] = 20_000
@@ -31,6 +32,8 @@ _SUMMARY_ANGLES: Final[tuple[str, ...]] = (
 
 _LANGUAGE_NAMES: Final[dict[str, str]] = {
     "zh": "繁體中文",
+    "zh-hant": "繁體中文",
+    "zh-tw": "繁體中文",
     "en": "English",
     "ja": "日本語",
 }
@@ -45,7 +48,8 @@ def language_name(code: str) -> str:
     Returns:
         語言名稱；未知代碼原樣回傳。
     """
-    return _LANGUAGE_NAMES.get(code, code)
+    normalized = code.strip().lower().replace("_", "-")
+    return _LANGUAGE_NAMES.get(normalized, code)
 
 
 def _summary_angle_lines(count: int) -> str:
@@ -118,6 +122,11 @@ def text_system_prompt(
                 "關鍵字要是讀者真的會拿去搜尋的詞，涵蓋主題、技術名詞與應用情境，"
                 "避免過於籠統的字（例如「技術」「教學」）。"
             ),
+            (
+                "每個關鍵字必須是連貫的一個詞，中間不能有空白。"
+                "例如寫「plotnine教學」不要寫「plotnine 教學」，"
+                "寫「Python繪圖」不要寫「Python 繪圖」。"
+            ),
             "關鍵字依重要性由高到低排序，彼此不重複、不互為子集。",
         ]
 
@@ -175,6 +184,9 @@ def image_system_prompt(alt_language: str, *, alt_max_chars: int = ALT_MAX_CHARS
         system prompt 文字。
     """
     name = language_name(alt_language)
+    alt_lang_rule = f"alt 文字使用{name}"
+    if wants_traditional_chinese(alt_language):
+        alt_lang_rule += "（台灣正體），禁止使用簡體字"
     return (
         "你是負責圖片 SEO 的編輯。你會看到一張部落格文章中的圖片，"
         "以及它在文章裡的上下文。請產出這張圖的檔名與 alt 文字。\n\n"
@@ -182,7 +194,7 @@ def image_system_prompt(alt_language: str, *, alt_max_chars: int = ALT_MAX_CHARS
         "1. 檔名一律使用英文小寫，單字之間用連字號，3 到 6 個單字，不含副檔名。\n"
         "2. 檔名要描述圖片的實際內容，不要用 image、photo、screenshot-1 這種無意義的字。"
         "如果圖片是某個工具的操作畫面，就寫出工具名稱與該畫面在做什麼。\n"
-        f"3. alt 文字使用{name}，長度不得超過 {alt_max_chars} 個字元。"
+        f"3. {alt_lang_rule}，長度不得超過 {alt_max_chars} 個字元。"
         "計算方式是逐字元計算，中文字、英文字母、數字、標點符號與空白各算一個字元。"
         "這是硬性要求，寫完請自行數過再輸出。\n"
         "4. alt 只寫這張圖最重要的那一件事，一句話講完就好，不要條列細節、"

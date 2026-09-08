@@ -26,6 +26,8 @@ def test_prompt_states_the_configured_range() -> None:
 def test_prompt_states_keyword_count() -> None:
     prompt = text_system_prompt("zh", keyword_count=8)
     assert "8 個關鍵字" in prompt
+    assert "中間不能有空白" in prompt
+    assert "plotnine教學" in prompt
 
 
 def test_prompt_lists_distinct_angles_for_each_variant() -> None:
@@ -52,6 +54,7 @@ def test_prompt_extends_beyond_predefined_angles() -> None:
 
 def test_prompt_follows_article_language() -> None:
     assert "繁體中文" in text_system_prompt("zh")
+    assert "繁體中文" in text_system_prompt("zh-TW")
     assert "English" in text_system_prompt("en")
 
 
@@ -75,6 +78,22 @@ def test_keywords_are_deduped() -> None:
         summaries=["摘要"],
     )
     assert result.keywords == ["一", "二", "三", "四", "五", "六"]
+
+
+def test_keywords_internal_spaces_are_removed() -> None:
+    result = KeywordSummaryResult(
+        keywords=["Python plotnine 繪圖", "ggplot2 轉 Python", "plotnine教學"],
+        summaries=["摘要"],
+    )
+    assert result.keywords == ["Pythonplotnine繪圖", "ggplot2轉Python", "plotnine教學"]
+
+
+def test_keywords_with_and_without_spaces_are_deduped() -> None:
+    result = KeywordSummaryResult(
+        keywords=["Azure NSG", "AzureNSG", "白名單"],
+        summaries=["摘要"],
+    )
+    assert result.keywords == ["AzureNSG", "白名單"]
 
 
 def test_keywords_are_capped_at_schema_max() -> None:
@@ -135,12 +154,15 @@ def test_image_prompt_states_alt_limit() -> None:
 
     assert "不得超過 30 個字元" in prompt
     assert "繁體中文" in prompt
+    assert "禁止使用簡體字" in prompt
     assert "一句話講完" in prompt
 
 
 def test_image_prompt_follows_alt_language() -> None:
-    assert "English" in image_system_prompt("en", alt_max_chars=40)
-    assert "不得超過 40 個字元" in image_system_prompt("en", alt_max_chars=40)
+    english = image_system_prompt("en", alt_max_chars=40)
+    assert "English" in english
+    assert "不得超過 40 個字元" in english
+    assert "禁止使用簡體字" not in english
 
 
 def test_from_payload_fills_missing_field_with_empty_list() -> None:

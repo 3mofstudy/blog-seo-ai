@@ -74,7 +74,7 @@ def test_analyze_text_validates_schema() -> None:
     )
     result = _provider(fake).analyze_text("文章內容")
 
-    assert result.keywords[:2] == ["Azure NSG", "白名單"]
+    assert result.keywords[:2] == ["AzureNSG", "白名單"]
     assert result.summaries
     assert fake.calls[0]["response_format"]["type"] == "json_schema"
     assert fake.calls[0]["model"] == HuggingFaceProvider.default_model

@@ -45,6 +45,7 @@ from blogseo.schemas.result import (
     ModelUsage,
 )
 from blogseo.settings import AppSettings
+from blogseo.zh import to_traditional_chinese, wants_traditional_chinese
 
 #: 進度回呼：(已完成數, 總數, 說明文字)。
 ProgressCallback = Callable[[int, int, str], None]
@@ -416,6 +417,10 @@ def _run_image_job(slot: _ProviderSlot, job: _ImageJob) -> ModelImageAnalysis:
             error=str(exc),
             elapsed_ms=int((time.perf_counter() - started) * 1000),
         )
+    if wants_traditional_chinese(slot.provider.alt_language):
+        converted = to_traditional_chinese(result.alt)
+        if converted != result.alt:
+            result = result.model_copy(update={"alt": converted})
     return ModelImageAnalysis(
         model_id=slot.provider.image_model,
         result=result,
