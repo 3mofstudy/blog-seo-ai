@@ -42,8 +42,19 @@ def test_prompt_lists_distinct_angles_for_each_variant() -> None:
 def test_prompt_omits_angle_section_for_single_summary() -> None:
     prompt = text_system_prompt("zh", summary_count=1)
 
-    assert "一則 meta description" in prompt
+    assert "一則文章摘要" in prompt
     assert "第 1 則：" not in prompt
+
+
+def test_prompt_describes_vocus_list_summary_style() -> None:
+    prompt = text_system_prompt("zh")
+
+    assert "方格子" in prompt
+    assert "https://vocus.cc/salon/lucy-r" in prompt
+    assert "主要介紹" in prompt
+    assert "本文為 MLflow 實戰系列的完結篇" in prompt
+    assert "不要用「本文將介紹」" not in prompt
+    assert "100 到 150 個字元" in prompt
 
 
 def test_prompt_extends_beyond_predefined_angles() -> None:
@@ -134,13 +145,15 @@ def test_prompt_omits_summary_rules_when_not_requested() -> None:
 
     assert "關鍵字" in prompt
     assert "摘要" not in prompt
+    assert "方格子" not in prompt
     assert "meta description" not in prompt
 
 
 def test_prompt_omits_keyword_rules_when_not_requested() -> None:
     prompt = text_system_prompt("zh", include_keywords=False)
 
-    assert "meta description" in prompt
+    assert "文章摘要" in prompt
+    assert "方格子" in prompt
     assert "關鍵字" not in prompt
 
 

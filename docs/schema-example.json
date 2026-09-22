@@ -159,7 +159,7 @@
     "total_elapsed_ms": 37946,
     "requested_fields": ["images", "keywords", "summary"],
     "alt_language": "zh",
-    "summary_min_chars": 60,
+    "summary_min_chars": 100,
     "summary_max_chars": 150,
     "summary_count": 3,
     "alt_max_chars": 30,

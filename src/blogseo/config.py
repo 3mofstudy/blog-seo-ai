@@ -56,12 +56,12 @@ MAX_IMAGE_BYTES: Final[int] = 4 * 1024 * 1024
 #: 要求模型產生的關鍵字數量。
 KEYWORD_COUNT: Final[int] = 5
 
-#: meta description 的字元上限。字元一律以 Python ``len()`` 計算，
-#: 中文字、標點、空白各算一個。Google 桌面版搜尋結果約在 150 到 160 之間截斷。
+#: 方格子列表摘要的字元上限。字元一律以 Python ``len()`` 計算，
+#: 中文字、標點、空白各算一個。超過會在沙龍列表被截斷。
 SUMMARY_MAX_CHARS: Final[int] = 150
 
-#: meta description 的字元下限。太短的摘要撐不滿搜尋結果版位，資訊量也不足。
-SUMMARY_MIN_CHARS: Final[int] = 60
+#: 方格子列表摘要的字元下限。少於這個長度通常講不完文章重點。
+SUMMARY_MIN_CHARS: Final[int] = 100
 
 #: 每個模型要產生幾個不同角度的摘要版本供挑選。
 SUMMARY_VARIANT_COUNT: Final[int] = 3

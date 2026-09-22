@@ -2,14 +2,14 @@
   "schema_version": "1.0",
   "_readme": "可直接編輯此檔來調整預設值，不必開啟 CLI。未寫的欄位會用內建預設。也可在程式裡選「6. 其他設定」寫回這裡。模型寫法與 --models 相同，例如 hf、claude、hf:Qwen/Qwen3-8B。",
   "models": {
-    "text": "gpt:gpt-5.6-terra",
-    "image": "gpt:gpt-5.6-terra"
+    "text": "hf:Qwen/Qwen3-4B-Instruct-2507",
+    "image": "hf:zai-org/GLM-4.6V-Flash"
   },
   "keywords": {
     "count": 5
   },
   "summary": {
-    "min_chars": 60,
+    "min_chars": 100,
     "max_chars": 150,
     "count": 3
   },

@@ -29,7 +29,7 @@ def test_partial_json_fills_defaults(tmp_path: Path) -> None:
     assert settings.models.text == "claude"
     assert settings.models.image == "hf"
     assert settings.alt.max_chars == 40
-    assert settings.summary.min_chars == 60
+    assert settings.summary.min_chars == 100
     assert settings.apply.write_front_matter is True
 
 

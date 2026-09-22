@@ -402,7 +402,7 @@ def test_defaults_to_three_summaries(tmp_path: Path, stub_factory: dict[str, Any
     assert len(entry.result.summaries) == 3
     assert len(set(entry.result.summaries)) == 3
     assert result.metadata.summary_count == 3
-    assert result.metadata.summary_min_chars == 60
+    assert result.metadata.summary_min_chars == 100
     assert result.metadata.summary_max_chars == 150
 
 

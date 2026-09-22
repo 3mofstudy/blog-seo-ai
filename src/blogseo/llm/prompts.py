@@ -20,14 +20,23 @@ from blogseo.zh import wants_traditional_chinese
 #: 送進模型的正文字元上限，避免超長文章造成不必要的花費。
 MAX_CONTENT_CHARS: Final[int] = 20_000
 
-#: 各摘要版本的切入角度。要求多個版本時依序套用，目的是讓版本之間真的不同，
+#: 各摘要版本的切入角度。對齊方格子沙龍列表常見寫法，目的是讓版本之間真的不同，
 #: 而不是同一句話換幾個詞。超出清單長度的部分交由模型自行延伸。
 _SUMMARY_ANGLES: Final[tuple[str, ...]] = (
-    "點出讀者實際遇到的問題，以及這篇文章提供的解法",
-    "強調文章中出現的具體技術、工具名稱與關鍵數字",
-    "說明讀者照做之後能達成什麼結果、獲得什麼好處",
-    "描述這個做法適用的情境與前提條件",
-    "指出這個主題常見的誤解或容易踩的坑",
+    "系列或文章定位：點出這篇在解決什麼問題，接著列出本文實際會介紹的重點",
+    "讀者痛點開場：用「如果你…卻…」點出卡關之處，再接到本文的工具或做法會帶你做什麼",
+    "主題加適用對象：先說主題是什麼、適用於誰，再交代文章涵蓋的原理、實作與會對照的概念",
+    "反直覺問題開場：用「為什麼…？」抓住注意力，再說明本文探討的核心概念與會介紹的具體方法",
+    "承接前文：僅當文章確實接續前作時，用「在上一篇文章中…」回顧上一篇再引出本文要往哪走；否則改寫成對本文主題的鋪陳與轉折",
+)
+
+#: 方格子沙龍列表摘要的寫法示範。只給語氣與資訊密度，模型不得抄寫這些題材。
+_SUMMARY_STYLE_EXAMPLES: Final[tuple[str, ...]] = (
+    "本文為 MLflow 實戰系列的完結篇，著重於解決企業級 MLflow 部署所面臨的安全性風險與協作權限問題。透過手把手教學，介紹如何啟用 MLflow 內建的 Auth 權限管理系統，Docker 容器化部署",
+    "如果你習慣 R 語言 ggplot2 的優雅繪圖，卻在轉往 Python 時對 Matplotlib 感到苦手，那麼 plotnine 將是你不能錯過的救星！這篇文章將帶你快速認識 plotnine，完美復刻 ggplot2 語法的 Python",
+    "本文深入解析資料包絡分析 (DEA)，適用於評估銀行分行、醫院、學校或企業部門等決策單位。文章涵蓋 DEA 的歷史起源、數學原理，並提供 R 語言的實際操作範例，及如何理解效率值、CCR 與 BCC 模型差異",
+    "為什麼機器學習分類問題中，99% 的準確率可能毫無價值？本文將深入探討類別不平衡（Class Imbalance）和準確率悖論（Accuracy Paradox），並介紹敏感度、精確率、F1-score 等更適合的評估指標",
+    "在上一篇文章中，我們一起漫步於機率分布的世界，認識了像常態分布、二項分布、柏松分布這些基礎卻無比重要的「地標」。它們是統計學的基石，描述了數據世界中最常見的幾種規律。然而，機率的宇宙浩瀚無垠",
 )
 
 _LANGUAGE_NAMES: Final[dict[str, str]] = {
@@ -72,6 +81,19 @@ def _summary_angle_lines(count: int) -> str:
     return "\n".join(lines)
 
 
+def _summary_style_rule() -> str:
+    """方格子列表摘要的語氣說明與示範。"""
+    examples = "\n".join(f"   - {example}" for example in _SUMMARY_STYLE_EXAMPLES)
+    return (
+        "寫法要像方格子沙龍的列表摘要：資訊密度高、具體，"
+        "不要寫成搜尋引擎 meta description 或空洞的行銷文案。"
+        "可依文章性質選用類似開頭，但後面必須立刻接上具體內容。"
+        "以下是語氣與資訊密度的示範，只模仿寫法，禁止抄寫這些題材。\n"
+        "示範有的在列表字數上限處被截斷，你產出的摘要必須是完整句子。\n"
+        + examples
+    )
+
+
 def text_system_prompt(
     language: str,
     *,
@@ -112,7 +134,7 @@ def text_system_prompt(
     if include_keywords:
         goals.append(f"{keyword_count} 個關鍵字")
     if include_summaries:
-        goals.append(f"{plural} meta description")
+        goals.append(f"{plural}文章摘要")
 
     rules: list[str] = [f"輸出一律使用{name}，與文章語言一致。"]
 
@@ -133,13 +155,26 @@ def text_system_prompt(
     if include_summaries:
         rules += [
             (
+                "這些摘要會刊登在方格子沙龍（https://vocus.cc/salon/lucy-r）的文章列表，"
+                "讓讀者決定要不要點進去。每一則都必須說清楚這篇文章主要介紹什麼："
+                "主題、要解決的問題或適用對象，以及文中實際會講到的工具、方法、模型或步驟。"
+                "禁止只寫氣氛、口號或「不容錯過」卻沒有資訊。"
+            ),
+            (
                 f"每則摘要的長度必須落在 {summary_min_chars} 到 {summary_max_chars} 個字元之間。"
                 "計算方式是逐字元計算，中文字、英文字母、數字、標點符號與空白各算一個字元。"
-                "這是硬性要求，寫完請自行確認長度再輸出，太短撐不滿搜尋結果版位，"
-                "太長會被搜尋引擎截斷。"
+                "這是硬性要求，寫完請自行確認長度再輸出；少於下限通常講不完重點，"
+                "超過上限會在列表被截斷。必須在上限內把句子寫完，不要寫到一半。"
             ),
             "每則摘要都是單一段落、語句完整通順，不要換行，也不要用條列。",
-            "摘要不要用「本文將介紹」「在這篇文章中」這類空話開頭，直接講重點。",
+            _summary_style_rule(),
+            (
+                "專有名詞、工具名、模型名保留文章用字，不要改成「相關技術」「這個方法」這種空詞。"
+                "文章不是系列就不要寫「完結篇」或「在上一篇文章中」。"
+                "「本文為」「本文深入解析」「這篇文章將帶你」「為什麼…？本文將深入探討」"
+                "這類開頭可以使用，但後面必須立刻接上具體內容，"
+                "禁止整則只有「本文將介紹某某主題。」這種空話。"
+            ),
         ]
         if summary_count > 1:
             rules.append(
@@ -147,12 +182,19 @@ def text_system_prompt(
                 "不能只是同一句話換幾個詞。請依下列分工撰寫：\n"
                 + _summary_angle_lines(summary_count)
             )
+        else:
+            rules.append(
+                "請依文章性質，從上述寫法中選最貼切的一種來寫，"
+                "不要硬套不存在的系列或前文。"
+            )
 
     numbered = "\n".join(f"{index}. {rule}" for index, rule in enumerate(rules, start=1))
-    return (
-        "你是資深的技術部落格 SEO 編輯。你的任務是閱讀一篇文章，"
-        f"產出{'與'.join(goals)}。\n\n規則：\n{numbered}"
+    role = (
+        "你是方格子技術沙龍的編輯，文章都將刊登於 https://vocus.cc/salon/lucy-r。"
+        if include_summaries
+        else "你是資深的技術部落格 SEO 編輯。"
     )
+    return f"{role}你的任務是閱讀一篇文章，產出{'與'.join(goals)}。\n\n規則：\n{numbered}"
 
 
 def text_user_prompt(title: str | None, content: str) -> str:

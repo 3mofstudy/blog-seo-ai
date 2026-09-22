@@ -95,7 +95,7 @@ _KEYWORDS_DESCRIPTION: Final[str] = (
     "每個關鍵字必須連成一個詞，中間不能有空白"
 )
 _SUMMARIES_DESCRIPTION: Final[str] = (
-    "多個不同切入角度的文章摘要，作為 meta description 使用。"
+    "方格子沙龍列表用的文章摘要，須說明本文主要介紹哪些重點；"
     "數量與字數範圍依指示辦理，每則都是單一段落不換行，使用文章本身的語言"
 )
 
