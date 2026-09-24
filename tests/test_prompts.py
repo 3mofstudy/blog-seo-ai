@@ -30,6 +30,11 @@ def test_prompt_states_keyword_count() -> None:
     assert "plotnine教學" in prompt
 
 
+def test_prompt_states_keyword_max_chars() -> None:
+    prompt = text_system_prompt("zh", keyword_max_chars=6)
+    assert "不得超過 6 個字元" in prompt
+
+
 def test_prompt_lists_distinct_angles_for_each_variant() -> None:
     prompt = text_system_prompt("zh", summary_count=3)
 

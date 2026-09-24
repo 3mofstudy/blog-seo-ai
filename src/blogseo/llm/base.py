@@ -16,6 +16,7 @@ from typing import ClassVar, Final
 from blogseo.config import (
     ALT_MAX_CHARS,
     KEYWORD_COUNT,
+    KEYWORD_MAX_CHARS,
     SUMMARY_MAX_CHARS,
     SUMMARY_MIN_CHARS,
     SUMMARY_VARIANT_COUNT,
@@ -97,6 +98,7 @@ class BaseProvider(ABC):
         alt_language: str = "zh",
         fields: frozenset[AnalysisField] = DEFAULT_FIELDS,
         keyword_count: int = KEYWORD_COUNT,
+        keyword_max_chars: int = KEYWORD_MAX_CHARS,
         summary_count: int = SUMMARY_VARIANT_COUNT,
         summary_min_chars: int = SUMMARY_MIN_CHARS,
         summary_max_chars: int = SUMMARY_MAX_CHARS,
@@ -113,6 +115,7 @@ class BaseProvider(ABC):
             alt_language: alt 文字的語言代碼。
             fields: 這次要產生的項目，決定送給模型的 schema 與 prompt 內容。
             keyword_count: 要產生幾個關鍵字。
+            keyword_max_chars: 每個關鍵字的字元上限。超過的詞會捨棄。
             summary_count: 要產生幾個不同角度的摘要版本。
             summary_min_chars: 每則摘要的字元下限。
             summary_max_chars: 每則摘要的字元上限。
@@ -128,6 +131,7 @@ class BaseProvider(ABC):
         self.alt_language = alt_language
         self.fields = fields
         self.keyword_count = keyword_count
+        self.keyword_max_chars = keyword_max_chars
         self.summary_count = summary_count
         self.summary_min_chars = summary_min_chars
         self.summary_max_chars = summary_max_chars
@@ -182,8 +186,15 @@ class BaseProvider(ABC):
     def _limit_text_result(self, result: KeywordSummaryResult) -> KeywordSummaryResult:
         """依本次設定裁切關鍵字與摘要數量。模型多給的直接捨去，不足時不補。"""
         updates: dict[str, list[str]] = {}
-        if len(result.keywords) > self.keyword_count:
-            updates["keywords"] = result.keywords[: self.keyword_count]
+        keywords = [
+            keyword
+            for keyword in result.keywords
+            if len(keyword) <= self.keyword_max_chars
+        ]
+        if len(keywords) > self.keyword_count:
+            keywords = keywords[: self.keyword_count]
+        if keywords != result.keywords:
+            updates["keywords"] = keywords
         if len(result.summaries) > self.summary_count:
             updates["summaries"] = result.summaries[: self.summary_count]
         if not updates:

@@ -1,6 +1,6 @@
 {
   "_comment": "analyze 階段輸出的 JSON 範例。這份檔案是結構的權威參考，修改 src/blogseo/schemas/result.py 時務必同步更新。範例刻意包含成功、模型失敗、圖片略過、費用未知四種情況。",
-  "schema_version": "1.4",
+  "schema_version": "1.5",
   "article_info": {
     "path": "D:\\blog\\content\\posts\\kriging-interpolation\\index.md",
     "title": "用克利金法做空間內插：從採樣點到連續濃度圖",
@@ -155,10 +155,11 @@
   "metadata": {
     "generated_at": "2026-08-21T07:34:25+00:00",
     "tool_version": "0.1.0",
-    "schema_version": "1.4",
+    "schema_version": "1.5",
     "total_elapsed_ms": 37946,
     "requested_fields": ["images", "keywords", "summary"],
     "alt_language": "zh",
+    "keyword_max_chars": 6,
     "summary_min_chars": 100,
     "summary_max_chars": 150,
     "summary_count": 3,

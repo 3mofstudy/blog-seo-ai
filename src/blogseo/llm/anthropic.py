@@ -158,6 +158,7 @@ class AnthropicProvider(BaseProvider):
                 include_keywords=AnalysisField.KEYWORDS in self.fields,
                 include_summaries=AnalysisField.SUMMARY in self.fields,
                 keyword_count=self.keyword_count,
+                keyword_max_chars=self.keyword_max_chars,
                 summary_count=self.summary_count,
                 summary_min_chars=self.summary_min_chars,
                 summary_max_chars=self.summary_max_chars,

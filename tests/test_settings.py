@@ -109,6 +109,16 @@ def test_env_overrides_search_path(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert load_settings().models.image == "claude"
 
 
+def test_keyword_max_chars_defaults_to_six_and_can_be_overridden() -> None:
+    assert settings_from_mapping({}).keywords.max_chars == 6
+    settings = settings_from_mapping({"keywords": {"max_chars": 8, "count": 4}})
+    options = options_from_settings(
+        settings, fields=frozenset({AnalysisField.KEYWORDS})
+    )
+    assert options.keyword_count == 4
+    assert options.keyword_max_chars == 8
+
+
 def test_options_from_settings_splits_models() -> None:
     settings = settings_from_mapping(
         {"models": {"text": "claude", "image": "hf"}, "summary": {"count": 1}}

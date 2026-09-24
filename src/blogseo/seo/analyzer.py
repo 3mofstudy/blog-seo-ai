@@ -20,6 +20,7 @@ from blogseo.config import (
     ALT_MAX_CHARS,
     CONTEXT_RADIUS,
     KEYWORD_COUNT,
+    KEYWORD_MAX_CHARS,
     SUMMARY_MAX_CHARS,
     SUMMARY_MIN_CHARS,
     SUMMARY_VARIANT_COUNT,
@@ -63,6 +64,7 @@ class AnalyzeOptions:
         image_tokens: 圖片分析專用的模型；``None`` 表示沿用 ``model_tokens``。
         alt_language: alt 使用的語言，``auto`` 表示跟隨文章語言。
         keyword_count: 每個模型要產生幾個關鍵字。
+        keyword_max_chars: 每個關鍵字的字元上限。
         summary_count: 每個模型要產生幾個不同角度的摘要版本。
         summary_min_chars: 每則摘要的字元下限。
         summary_max_chars: 每則摘要的字元上限。
@@ -80,6 +82,7 @@ class AnalyzeOptions:
     image_tokens: list[str] | None = None
     alt_language: str = "auto"
     keyword_count: int = KEYWORD_COUNT
+    keyword_max_chars: int = KEYWORD_MAX_CHARS
     summary_count: int = SUMMARY_VARIANT_COUNT
     summary_min_chars: int = SUMMARY_MIN_CHARS
     summary_max_chars: int = SUMMARY_MAX_CHARS
@@ -172,6 +175,7 @@ def options_from_settings(
         image_tokens=image_tokens,
         alt_language=settings.alt.language,
         keyword_count=settings.keywords.count,
+        keyword_max_chars=settings.keywords.max_chars,
         summary_count=settings.summary.count,
         summary_min_chars=settings.summary.min_chars,
         summary_max_chars=settings.summary.max_chars,
@@ -328,6 +332,7 @@ def _build_slots(article: ParsedArticle, options: AnalyzeOptions) -> list[_Provi
                 alt_language=alt_language,
                 fields=options.fields,
                 keyword_count=options.keyword_count,
+                keyword_max_chars=options.keyword_max_chars,
                 summary_count=options.summary_count,
                 summary_min_chars=options.summary_min_chars,
                 summary_max_chars=options.summary_max_chars,
@@ -553,6 +558,7 @@ def analyze_article(
             total_elapsed_ms=int((time.perf_counter() - overall_started) * 1000),
             requested_fields=sorted(field.value for field in options.fields),
             alt_language=alt_language,
+            keyword_max_chars=options.keyword_max_chars,
             summary_min_chars=options.summary_min_chars,
             summary_max_chars=options.summary_max_chars,
             summary_count=options.summary_count,

@@ -149,7 +149,7 @@ blog-seo-ai apply output/post-selection.json
 | --- | --- |
 | `models.text` | 關鍵字／摘要模型。選單先選供應商，再自行輸入型號（內建預設可直接 Enter）。`hf`、`huggingface`、`qwen` 是同一家 |
 | `models.image` | 圖片辨識模型，可與文字模型不同 |
-| `keywords.count` | 關鍵字數量 |
+| `keywords.count` / `max_chars` | 關鍵字數量，以及每個關鍵字的字數上限（預設 6） |
 | `summary.min_chars` / `max_chars` / `count` | 摘要字數範圍與則數 |
 | `alt.max_chars` / `language` | alt 字數上限與語言（`auto` 跟隨文章） |
 | `analyze.concurrency` / `timeout_seconds` / `max_images` | 平行數、逾時、最多分析幾張圖 |

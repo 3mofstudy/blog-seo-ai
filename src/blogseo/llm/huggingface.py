@@ -16,6 +16,7 @@ import re
 import time
 from typing import Any, ClassVar, TypeVar
 
+import httpx
 from huggingface_hub import InferenceClient
 from huggingface_hub.errors import HfHubHTTPError, InferenceTimeoutError
 from pydantic import BaseModel, ValidationError
@@ -110,6 +111,7 @@ class HuggingFaceProvider(BaseProvider):
                         include_keywords=AnalysisField.KEYWORDS in self.fields,
                         include_summaries=AnalysisField.SUMMARY in self.fields,
                         keyword_count=self.keyword_count,
+                        keyword_max_chars=self.keyword_max_chars,
                         summary_count=self.summary_count,
                         summary_min_chars=self.summary_min_chars,
                         summary_max_chars=self.summary_max_chars,
@@ -218,7 +220,13 @@ class HuggingFaceProvider(BaseProvider):
                 temperature=0.2,
                 response_format=response_format,
             )
-        except (HfHubHTTPError, InferenceTimeoutError, TimeoutError, OSError) as exc:
+        except (
+            HfHubHTTPError,
+            InferenceTimeoutError,
+            TimeoutError,
+            OSError,
+            httpx.HTTPError,
+        ) as exc:
             self.usage.record_failure(elapsed_ms=_elapsed_ms(started))
             raise ProviderError(self.name, model, explain_hf_error(exc)) from exc
 
@@ -330,6 +338,12 @@ def explain_hf_error(exc: BaseException) -> str:
     if body and body not in text:
         text = f"{text}\n{body}"
     lowered = text.lower()
+    if "certificate verify failed" in lowered or "self-signed certificate" in lowered:
+        return (
+            "連線被憑證驗證擋下（憑證鏈裡有自簽憑證）。"
+            "通常是防毒、公司代理或 VPN 在攔截 HTTPS。"
+            "請確認該憑證已安裝在 Windows 的受信任根憑證，然後再試一次。"
+        )
     if "json_schema" in lowered and "does not support" in lowered:
         return "這個供應商的視覺模型不支援 json_schema，請改用 json_object。"
     if "capacity_exhausted" in lowered or "temporarily at capacity" in lowered:

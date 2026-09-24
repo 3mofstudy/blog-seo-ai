@@ -21,6 +21,7 @@ images（依圖片再依 model 分組）, metadata（耗時/token數）
 字元數以 Python `len()` 計算，中文字、標點、空白各算一個。
 本次要求的字數範圍與版本數記在 `metadata.summary_min_chars`、
 `summary_max_chars`、`summary_count`，讓 JSON 本身可自我說明。
+每個關鍵字的字元上限記在 `metadata.keyword_max_chars`。
 
 alt 比照摘要處理：`metadata.alt_max_chars` 記錄本次要求的字元上限，
 每個模型的圖片結果同層帶 `alt_length` 記錄實際字元數。長度以 Python `len()`

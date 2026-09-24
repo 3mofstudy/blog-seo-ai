@@ -372,5 +372,10 @@ def _inject_run_command() -> None:
 
 def main() -> None:
     """套件進入點。"""
+    # httpx 預設只信 certifi。Windows 上防毒或代理裝的憑證在系統憑證庫，
+    # 不注入的話會以 self-signed certificate in certificate chain 中斷連線。
+    import truststore
+
+    truststore.inject_into_ssl()
     _inject_run_command()
     app()

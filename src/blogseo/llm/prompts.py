@@ -11,6 +11,7 @@ from typing import Final
 from blogseo.config import (
     ALT_MAX_CHARS,
     KEYWORD_COUNT,
+    KEYWORD_MAX_CHARS,
     SUMMARY_MAX_CHARS,
     SUMMARY_MIN_CHARS,
     SUMMARY_VARIANT_COUNT,
@@ -100,6 +101,7 @@ def text_system_prompt(
     include_keywords: bool = True,
     include_summaries: bool = True,
     keyword_count: int = KEYWORD_COUNT,
+    keyword_max_chars: int = KEYWORD_MAX_CHARS,
     summary_count: int = SUMMARY_VARIANT_COUNT,
     summary_min_chars: int = SUMMARY_MIN_CHARS,
     summary_max_chars: int = SUMMARY_MAX_CHARS,
@@ -114,6 +116,7 @@ def text_system_prompt(
         include_keywords: 是否要產生關鍵字。
         include_summaries: 是否要產生摘要。
         keyword_count: 要產生幾個關鍵字。
+        keyword_max_chars: 每個關鍵字的字元上限。
         summary_count: 要產生幾個摘要版本。
         summary_min_chars: 每則摘要的字元下限。
         summary_max_chars: 每則摘要的字元上限。
@@ -148,6 +151,11 @@ def text_system_prompt(
                 "每個關鍵字必須是連貫的一個詞，中間不能有空白。"
                 "例如寫「plotnine教學」不要寫「plotnine 教學」，"
                 "寫「Python繪圖」不要寫「Python 繪圖」。"
+            ),
+            (
+                f"每個關鍵字不得超過 {keyword_max_chars} 個字元。"
+                "計算方式是逐字元計算，中文字、英文字母與數字各算一個字元。"
+                "這是硬性要求，寫完請自行確認長度再輸出；超過上限的詞會被捨棄。"
             ),
             "關鍵字依重要性由高到低排序，彼此不重複、不互為子集。",
         ]

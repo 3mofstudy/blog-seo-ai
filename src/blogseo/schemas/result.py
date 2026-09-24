@@ -21,7 +21,7 @@ from pydantic import (
     field_validator,
 )
 
-from blogseo.config import KEYWORD_COUNT
+from blogseo.config import KEYWORD_COUNT, KEYWORD_MAX_CHARS
 
 #: Pydantic 清理關鍵字時的上限。實際要幾個由設定／prompt 決定，
 #: provider 會再裁到 ``keyword_count``。這裡留寬一點以免設定被 schema 先砍掉。
@@ -35,7 +35,8 @@ from blogseo.image.renamer import slugify
 #: 1.3 起 ``article_info`` 帶 ``content_hash``，供 review 與 apply 確認
 #: occurrences 的字元位置在分析之後仍然有效。
 #: 1.4 起 metadata 記錄 ``alt_max_chars``，alt 長度不再是寫死的常數。
-SCHEMA_VERSION: Final[str] = "1.4"
+#: 1.5 起 metadata 記錄 ``keyword_max_chars``，每個關鍵字的字元上限可設定。
+SCHEMA_VERSION: Final[str] = "1.5"
 
 
 class AnalysisField(StrEnum):
@@ -353,6 +354,10 @@ class Metadata(BaseModel):
         ),
     )
     alt_language: str = Field(..., description="產生 alt 文字使用的語言")
+    keyword_max_chars: int = Field(
+        default=KEYWORD_MAX_CHARS,
+        description="本次要求的每個關鍵字字元上限；舊檔缺漏時用內建預設",
+    )
     summary_min_chars: int = Field(..., description="本次要求的摘要字元下限")
     summary_max_chars: int = Field(..., description="本次要求的摘要字元上限")
     summary_count: int = Field(..., description="本次要求的摘要版本數")

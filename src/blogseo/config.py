@@ -56,6 +56,10 @@ MAX_IMAGE_BYTES: Final[int] = 4 * 1024 * 1024
 #: 要求模型產生的關鍵字數量。
 KEYWORD_COUNT: Final[int] = 5
 
+#: 每個關鍵字的字元上限。字元一律以 Python ``len()`` 計算，
+#: 中文字、英文字母、數字各算一個。
+KEYWORD_MAX_CHARS: Final[int] = 6
+
 #: 方格子列表摘要的字元上限。字元一律以 Python ``len()`` 計算，
 #: 中文字、標點、空白各算一個。超過會在沙龍列表被截斷。
 SUMMARY_MAX_CHARS: Final[int] = 150

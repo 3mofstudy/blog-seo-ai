@@ -404,6 +404,17 @@ def test_defaults_to_three_summaries(tmp_path: Path, stub_factory: dict[str, Any
     assert result.metadata.summary_count == 3
     assert result.metadata.summary_min_chars == 100
     assert result.metadata.summary_max_chars == 150
+    assert result.metadata.keyword_max_chars == 6
+
+
+def test_keywords_longer_than_max_are_dropped() -> None:
+    provider = _StubProvider(keyword_max_chars=6, keyword_count=5)
+    result = provider._limit_text_result(
+        KeywordSummaryResult(
+            keywords=["克利金", "空間內插法很長", "DEA", "半變異元超過了"]
+        )
+    )
+    assert result.keywords == ["克利金", "DEA"]
 
 
 def test_summary_count_is_configurable(tmp_path: Path, stub_factory: dict[str, Any]) -> None:

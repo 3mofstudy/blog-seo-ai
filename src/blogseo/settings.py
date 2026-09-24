@@ -26,6 +26,7 @@ from blogseo.config import (
     DEFAULT_MODEL_TOKEN,
     DEFAULT_OUTPUT_DIR,
     KEYWORD_COUNT,
+    KEYWORD_MAX_CHARS,
     SUMMARY_MAX_CHARS,
     SUMMARY_MIN_CHARS,
     SUMMARY_VARIANT_COUNT,
@@ -70,6 +71,7 @@ class KeywordsSettings(BaseModel):
     model_config = ConfigDict(extra="ignore", validate_assignment=True)
 
     count: int = Field(default=KEYWORD_COUNT, ge=1, le=20)
+    max_chars: int = Field(default=KEYWORD_MAX_CHARS, ge=1, le=40)
 
 
 class SummarySettings(BaseModel):

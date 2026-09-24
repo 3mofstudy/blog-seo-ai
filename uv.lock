@@ -68,6 +68,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-frontmatter" },
     { name = "rich" },
+    { name = "truststore" },
     { name = "typer" },
     { name = "zhconv" },
 ]
@@ -88,6 +89,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "python-frontmatter", specifier = ">=1.1" },
     { name = "rich", specifier = ">=13.7" },
+    { name = "truststore", specifier = ">=0.10.4" },
     { name = "typer", specifier = ">=0.15" },
     { name = "zhconv", specifier = ">=1.4.3" },
 ]

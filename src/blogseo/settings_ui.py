@@ -43,7 +43,10 @@ def _print_settings_overview(settings: AppSettings) -> None:
     table.add_column("值", overflow="fold")
     table.add_row("關鍵字／摘要模型", format_model_token(settings.models.text, role="text"))
     table.add_row("圖片辨識模型", format_model_token(settings.models.image, role="image"))
-    table.add_row("關鍵字數量", str(settings.keywords.count))
+    table.add_row(
+        "關鍵字",
+        f"{settings.keywords.count} 個，每個最多 {settings.keywords.max_chars} 字",
+    )
     table.add_row(
         "摘要字數",
         f"{settings.summary.min_chars}–{settings.summary.max_chars}　{settings.summary.count} 則",
@@ -255,7 +258,7 @@ def _run_more_settings(settings: AppSettings) -> AppSettings:
     """較少改到的預設值。"""
     lines = [
         "1. alt 語言（auto / zh / en）",
-        "2. 關鍵字數量",
+        "2. 關鍵字數量與字數上限",
         "3. 平行呼叫數",
         "4. 請求逾時秒數",
         "5. 最多分析幾張圖（0 = 不限）",
@@ -275,6 +278,9 @@ def _run_more_settings(settings: AppSettings) -> AppSettings:
     elif choice == 2:
         settings.keywords.count = typer.prompt(
             "關鍵字數量", default=settings.keywords.count, type=int
+        )
+        settings.keywords.max_chars = typer.prompt(
+            "每個關鍵字字數上限", default=settings.keywords.max_chars, type=int
         )
     elif choice == 3:
         settings.analyze.concurrency = typer.prompt(
